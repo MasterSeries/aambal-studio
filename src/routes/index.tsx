@@ -415,7 +415,7 @@ function Home() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-border bg-card/40 p-3 sm:p-6 md:p-10 backdrop-blur-2xl overflow-hidden">
+          <div className="rounded-[28px] border border-border bg-card/40 p-5 sm:p-8 md:p-10 backdrop-blur-2xl">
             <BookingForm />
           </div>
         </div>
