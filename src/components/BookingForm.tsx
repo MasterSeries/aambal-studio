@@ -322,10 +322,12 @@ export function BookingForm() {
 
       // WHATSAPP
       // AUTOMATIC WHATSAPP MESSAGE
-await sendWhatsAppMessage(
-  parsed.data.phone,
+try {
 
-  `✨ Booking Confirmed
+  await sendWhatsAppMessage(
+    parsed.data.phone,
+
+    `✨ Booking Confirmed
 
 👤 ${parsed.data.name}
 
@@ -339,7 +341,15 @@ await sendWhatsAppMessage(
 ${drone ? "Yes" : "No"}
 
 Aambal Vasantham Studio`
-);
+  );
+
+} catch (whatsappErr) {
+
+  console.error(
+    "WhatsApp failed:",
+    whatsappErr
+  );
+}
 
 setBurst((b) => b + 1);
 
@@ -348,11 +358,8 @@ toast.success(
 );
 
 
-      e.currentTarget.reset();
-
-      setSelectedDate(null);
-
-      setSelectedSlots([]);
+      
+      
     } catch (err) {
       console.error(err);
 
@@ -362,7 +369,13 @@ toast.success(
     } finally {
       setLoading(false);
     }
+    e.currentTarget.reset();
+
+setSelectedDate(null);
+
+setSelectedSlots([]);
   }
+
 
   const field =
     "w-full rounded-2xl border border-white/10 bg-black/20 px-5 py-4 text-white placeholder:text-white/40 outline-none transition focus:border-pink-400";
