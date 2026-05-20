@@ -134,7 +134,7 @@ export function SlotCalendar({
               ),
           ]}
 
-          className="mx-auto text-white"
+          className="mx-auto w-full max-w-full overflow-hidden text-white"
         />
       </div>
 
