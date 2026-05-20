@@ -914,3 +914,54 @@ img {
 .custom-calendar .rdp-table {
   width: 100%;
 }
+
+/* =========================================
+   FINAL MOBILE BOOKING FIX
+========================================= */
+
+@media (max-width: 768px) {
+
+  body {
+    overflow-x: hidden;
+  }
+
+  .slot-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .slot-btn {
+    width: 100% !important;
+    min-height: 64px;
+    font-size: 16px;
+  }
+
+  .drone-card {
+    width: 100%;
+    padding: 16px !important;
+  }
+
+  textarea {
+    width: 100%;
+  }
+
+  .custom-calendar {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .rdp {
+    width: 100% !important;
+    --rdp-cell-size: 34px;
+  }
+
+  .rdp-button {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    font-size: 11px !important;
+  }
+}
