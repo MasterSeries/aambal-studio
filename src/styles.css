@@ -1,0 +1,556 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Tamil+MN&display=swap");
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-lily: var(--lily);
+  --color-leaf: var(--leaf);
+
+  --font-display: "Cormorant Garamond", serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* LUXURY PINK LILY THEME */
+
+  --background: oklch(0.17 0.035 340);
+  --foreground: oklch(0.97 0.015 340);
+
+  --card: oklch(0.22 0.045 340);
+  --card-foreground: oklch(0.97 0.015 340);
+
+  --popover: oklch(0.22 0.045 340);
+  --popover-foreground: oklch(0.97 0.015 340);
+
+  --primary: oklch(0.80 0.13 350);
+  --primary-foreground: oklch(0.17 0.035 340);
+
+  --secondary: oklch(0.28 0.05 340);
+  --secondary-foreground: oklch(0.97 0.015 340);
+
+  --muted: oklch(0.26 0.04 340);
+  --muted-foreground: oklch(0.75 0.03 340);
+
+  --accent: oklch(0.70 0.14 150);
+  --accent-foreground: oklch(0.17 0.035 340);
+
+  --destructive: oklch(0.60 0.24 27);
+  --destructive-foreground: oklch(0.98 0.02 80);
+
+  --border: oklch(0.34 0.05 340 / 60%);
+  --input: oklch(0.30 0.04 340);
+
+  --ring: oklch(0.80 0.13 350);
+
+  --lily: oklch(0.85 0.13 350);
+  --leaf: oklch(0.70 0.14 150);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background:
+      radial-gradient(
+        ellipse at top,
+        oklch(0.26 0.07 340) 0%,
+        transparent 60%
+      ),
+
+      radial-gradient(
+        ellipse at bottom right,
+        oklch(0.30 0.10 150 / 25%) 0%,
+        transparent 50%
+      ),
+
+      var(--color-background);
+
+    color: var(--color-foreground);
+
+    font-family: var(--font-sans);
+
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+/* =========================================
+   TEXT / GLOW
+========================================= */
+
+.text-gradient-lily {
+  background: linear-gradient(
+    135deg,
+    oklch(0.92 0.12 350),
+    oklch(0.72 0.18 340)
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(
+    135deg,
+    oklch(0.92 0.12 350),
+    oklch(0.72 0.18 340)
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  color: transparent;
+}
+
+.glow-lily {
+  box-shadow:
+    0 0 40px oklch(0.80 0.13 350 / 40%),
+    0 0 80px oklch(0.70 0.14 150 / 18%);
+}
+
+.glow-gold {
+  box-shadow:
+    0 0 40px oklch(0.80 0.13 350 / 40%),
+    0 0 80px oklch(0.70 0.14 150 / 18%);
+}
+
+.lotus-divider {
+  background-image:
+    linear-gradient(
+      90deg,
+      transparent,
+      var(--lily),
+      transparent
+    );
+
+  height: 1px;
+}
+
+/* =========================================
+   ANIMATIONS
+========================================= */
+
+@keyframes float-drift {
+  0%,
+  100% {
+    transform:
+      translateY(0)
+      rotate(-2deg);
+  }
+
+  50% {
+    transform:
+      translateY(-12px)
+      rotate(2deg);
+  }
+}
+
+.animate-drift {
+  animation:
+    float-drift 4s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation:
+    spin-slow 8s linear infinite;
+}
+
+@keyframes petal-fall {
+  0% {
+    transform:
+      translate(0,0)
+      rotate(0);
+
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translate(var(--dx,0), 220px)
+      rotate(var(--rot,360deg));
+
+    opacity: 0;
+  }
+}
+
+.petal {
+  animation:
+    petal-fall 1.6s ease-out forwards;
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0
+      oklch(0.80 0.13 350 / 50%);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 14px
+      oklch(0.80 0.13 350 / 0%);
+  }
+}
+
+.pulse-soft {
+  animation:
+    pulse-soft 2.4s ease-out infinite;
+}
+
+/* =========================================
+   BOOKING LAYOUT
+========================================= */
+
+.booking-layout {
+  display: grid;
+  gap: 40px;
+  align-items: start;
+}
+
+@media (min-width: 1280px) {
+  .booking-layout {
+    grid-template-columns:
+      0.9fr 1.1fr;
+  }
+}
+
+/* =========================================
+   PREMIUM CALENDAR
+========================================= */
+
+.rdp {
+  width: 100%;
+  margin: auto;
+
+  --rdp-cell-size: 54px;
+  --rdp-accent-color: #ff6ba6;
+  --rdp-background-color: rgba(255,255,255,0.08);
+}
+
+.rdp-month {
+  width: 100%;
+}
+
+.rdp-table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 10px;
+}
+
+.rdp-head_cell {
+  color: rgba(255,255,255,0.6);
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  text-transform: uppercase;
+}
+
+.rdp-cell {
+  text-align: center;
+}
+
+.rdp-button {
+  width: 54px;
+  height: 54px;
+
+  border-radius: 18px;
+
+  color: white;
+
+  font-weight: 500;
+
+  transition: all 0.25s ease;
+}
+
+.rdp-button:hover:not([disabled]) {
+  background: rgba(255,255,255,0.08);
+
+  transform: scale(1.06);
+}
+
+.rdp-day_selected,
+.rdp-day_selected:hover,
+.rdp-day_selected:focus-visible {
+  background:
+    linear-gradient(
+      135deg,
+      #ff6ba6,
+      #ffb3cf
+    ) !important;
+
+  color: white !important;
+
+  font-weight: 700;
+
+  box-shadow:
+    0 0 20px rgba(255,107,166,0.35),
+    0 0 40px rgba(255,107,166,0.15);
+}
+
+.rdp-day_today {
+  border:
+    1px solid rgba(255,255,255,0.15);
+}
+
+.rdp-day_disabled {
+  opacity: 0.2;
+}
+
+.rdp-caption {
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  margin-bottom: 20px;
+}
+
+.rdp-caption_label {
+  font-size: 2rem;
+
+  font-family: var(--font-display);
+
+  font-weight: 700;
+
+  color: white;
+}
+
+.rdp-nav {
+  display: flex;
+
+  gap: 10px;
+}
+
+.rdp-nav_button {
+  width: 42px;
+  height: 42px;
+
+  border-radius: 14px;
+
+  background: rgba(255,255,255,0.05);
+
+  color: white;
+
+  transition: 0.25s;
+}
+
+.rdp-nav_button:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+/* =========================================
+   SLOT BUTTONS
+========================================= */
+
+.slot-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(2, 1fr);
+
+  gap: 16px;
+}
+
+.slot-btn {
+  border-radius: 20px;
+
+  border:
+    1px solid rgba(255,255,255,0.08);
+
+  background:
+    rgba(255,255,255,0.04);
+
+  padding: 18px 20px;
+
+  font-size: 18px;
+
+  font-weight: 600;
+
+  color: white;
+
+  transition: all 0.25s ease;
+}
+
+.slot-btn:hover {
+  border-color: var(--primary);
+
+  background:
+    rgba(255,255,255,0.08);
+
+  transform: translateY(-2px);
+}
+
+.slot-btn.active {
+  background:
+    linear-gradient(
+      135deg,
+      #ff6ba6,
+      #ffb3cf
+    );
+
+  color: white;
+
+  border-color: transparent;
+
+  box-shadow:
+    0 0 20px rgba(255,107,166,0.35);
+}
+
+.slot-btn.booked {
+  background:
+    rgba(255,0,0,0.15);
+
+  border-color:
+    rgba(255,0,0,0.25);
+
+  color:
+    rgba(255,255,255,0.4);
+
+  cursor: not-allowed;
+}
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 768px) {
+  .slot-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rdp-button {
+    width: 46px;
+    height: 46px;
+  }
+
+  .rdp-caption_label {
+    font-size: 1.5rem;
+  }
+}
+
+/* =========================================
+   MOBILE RESPONSIVE SYSTEM
+========================================= */
+
+html,
+body {
+  overflow-x: hidden;
+}
+
+/* MOBILE TYPOGRAPHY */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 2.5rem !important;
+    line-height: 1.1 !important;
+  }
+
+  h2 {
+    font-size: 2rem !important;
+  }
+
+  h3 {
+    font-size: 1.5rem !important;
+  }
+
+  p {
+    font-size: 0.95rem !important;
+  }
+}
+
+/* MOBILE SECTION SPACING */
+@media (max-width: 768px) {
+  section {
+    padding-top: 70px !important;
+    padding-bottom: 70px !important;
+  }
+}
+
+/* MOBILE CARDS */
+@media (max-width: 768px) {
+  .mobile-card {
+    border-radius: 24px !important;
+    padding: 20px !important;
+  }
+}
+
+/* MOBILE BUTTONS */
+@media (max-width: 768px) {
+  button,
+  .mobile-btn {
+    min-height: 52px;
+    font-size: 16px;
+  }
+}
+
+/* RESPONSIVE IMAGES */
+img {
+  max-width: 100%;
+  height: auto;
+}
