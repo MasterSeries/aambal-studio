@@ -107,35 +107,67 @@ export function SlotCalendar({
       <div className="rounded-[28px] border border-white/10 bg-black/20 p-3 md:p-5">
         
         <DayPicker
-          mode="single"
+  mode="single"
+  selected={value.date || undefined}
 
-          selected={
-            value.date || undefined
-          }
+  onSelect={(date) =>
+    onChange({
+      ...value,
+      date: date || null,
+    })
+  }
 
-          onSelect={(date) => {
+  disabled={[
+    { before: new Date() },
 
-  onChange({
-    ...value,
-    date: date || null,
-    time: null,
-  });
-}}
+    (date) =>
+      blockedDates.includes(
+        date.toDateString()
+      ),
+  ]}
 
-          disabled={[
-            {
-              before:
-                new Date(),
-            },
+  className="custom-calendar mx-auto"
 
-            (date) =>
-              blockedDates.includes(
-                date.toDateString()
-              ),
-          ]}
+  styles={{
+    month: {
+      width: "100%",
+    },
 
-          className="mx-auto w-full max-w-full overflow-hidden text-white"
-        />
+    table: {
+      width: "100%",
+      tableLayout: "fixed",
+    },
+
+    head_cell: {
+      width: "32px",
+      height: "32px",
+      fontSize: "11px",
+    },
+
+    cell: {
+      width: "32px",
+      height: "32px",
+      padding: "0",
+    },
+
+    day: {
+      width: "32px",
+      height: "32px",
+      margin: "auto",
+      fontSize: "11px",
+      borderRadius: "10px",
+    },
+
+    caption_label: {
+      fontSize: "1rem",
+    },
+
+    nav_button: {
+      width: "28px",
+      height: "28px",
+    },
+  }}
+/>
       </div>
 
       {/* SLOT SECTION */}

@@ -896,3 +896,21 @@ img {
     font-size: 11px !important;
   }
 }
+/* FORCE MOBILE CALENDAR */
+.custom-calendar {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.custom-calendar .rdp-months {
+  width: 100%;
+}
+
+.custom-calendar .rdp-month {
+  width: 100%;
+}
+
+.custom-calendar .rdp-table {
+  width: 100%;
+}
