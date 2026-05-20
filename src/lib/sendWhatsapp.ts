@@ -7,7 +7,7 @@ export async function sendWhatsAppMessage(
   try {
 
     await axios.post(
-      "http://localhost:5000/send-whatsapp",
+      "https://aambal-backend.onrender.com/send-whatsapp",
       {
         phone,
         message,
