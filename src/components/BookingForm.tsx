@@ -515,7 +515,7 @@ setSelectedSlots([]);
               </span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {bookedSlots.length >
   0 && (
   <div className="mb-5 rounded-2xl border border-red-500/20 bg-red-500/10 p-4">

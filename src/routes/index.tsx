@@ -380,7 +380,7 @@ function Home() {
 
       {/* BOOKING */}
       <Section id="book">
-        <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr] lg:gap-20">
+        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20 items-start">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-primary mb-4">Reserve a slot</p>
             <h2 className="font-display text-5xl md:text-6xl mb-6">
@@ -415,7 +415,7 @@ function Home() {
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-border bg-card/40 p-5 sm:p-8 md:p-10 backdrop-blur-2xl">
+          <div className="rounded-[28px] border border-border bg-card/40 p-3 sm:p-6 md:p-10 backdrop-blur-2xl overflow-hidden">
             <BookingForm />
           </div>
         </div>
