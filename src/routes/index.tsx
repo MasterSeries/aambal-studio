@@ -338,7 +338,7 @@ function Home() {
                 </div>
               ))}
             </div>
-            <div className="mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-accent/10 p-6 flex items-center justify-between gap-4 flex-wrap">
+            <div className="drone-card mt-10 rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/10 to-accent/10 p-6 flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <div className="font-display text-2xl">Drone Add-on</div>
                 <div className="text-sm text-muted-foreground">Attach to any package · 90-min flight</div>
