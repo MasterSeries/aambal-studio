@@ -91,7 +91,7 @@ export function FlyingDrone() {
     <motion.div
       aria-hidden
       style={{ x: smoothX, y: smoothY, rotate: smoothRot }}
-      className="pointer-events-none absolute left-0 top-0 z-40 hidden md:block"
+      className="pointer-events-none absolute left-0 top-0 z-40 block"
     >
       {/* flying drone (bobs) */}
       <motion.div style={{ opacity: flyingOpacity }} className="animate-drift relative">
@@ -101,7 +101,7 @@ export function FlyingDrone() {
           alt=""
           width={180}
           height={120}
-          className="h-auto w-[140px] drop-shadow-[0_20px_30px_rgba(0,0,0,0.6)] lg:w-[170px]"
+          className="h-auto w-[90px] drop-shadow-[0_20px_30px_rgba(0,0,0,0.6)] sm:w-[120px] lg:w-[170px]"
         />
         <span className="absolute -bottom-2 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-accent shadow-[0_0_20px_hsl(20,90%,60%)] animate-ping" />
       </motion.div>
@@ -113,7 +113,7 @@ export function FlyingDrone() {
           alt=""
           width={180}
           height={120}
-          className="h-auto w-[140px] drop-shadow-[0_15px_25px_rgba(0,0,0,0.5)] lg:w-[170px]"
+          className="h-auto w-[90px] drop-shadow-[0_15px_25px_rgba(0,0,0,0.5)] sm:w-[120px] lg:w-[170px]"
         />
       </motion.div>
     </motion.div>
