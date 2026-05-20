@@ -116,9 +116,17 @@ export function BookingCalendar() {
       );
 
       // OPEN WHATSAPP
-      window.open(
-        `https://wa.me/918075797258?text=${encodeURIComponent(
-          `🎉 New Booking Request
+      // SUCCESS MESSAGE
+alert(
+  "Booking Confirmed Successfully!"
+);
+
+// OPEN WHATSAPP SAFELY
+try {
+
+  window.open(
+    `https://wa.me/918075797258?text=${encodeURIComponent(
+      `🎉 New Booking Request
 
 Name: ${name}
 
@@ -129,12 +137,16 @@ Email: ${email}
 Date: ${formattedDate}
 
 Time: ${selectedSlot}`
-        )}`
-      );
+    )}`
+  );
 
-      alert(
-        "Booking Confirmed Successfully!"
-      );
+} catch (whatsappErr) {
+
+  console.error(
+    "WhatsApp open failed",
+    whatsappErr
+  );
+}
 
       // RESET
       setSelectedSlot("");
