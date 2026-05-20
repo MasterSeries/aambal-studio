@@ -189,7 +189,7 @@ Time: ${selectedSlot}`
           Available Slots
         </h3>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="slot-grid">
           {timeSlots.map((slot) => {
             const booked =
               bookedSlots.includes(slot);
@@ -201,7 +201,7 @@ Time: ${selectedSlot}`
                 onClick={() =>
                   setSelectedSlot(slot)
                 }
-                className={`rounded-2xl border px-5 py-3 transition ${
+                className={`slot-btn rounded-2xl border px-5 py-3 transition ${
                   booked
                     ? "cursor-not-allowed border-red-500 bg-red-500/20 text-red-300"
                     : selectedSlot === slot
