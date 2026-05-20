@@ -699,3 +699,103 @@ img {
     font-size: 1.3rem;
   }
 }
+/* =========================================
+   PERFECT MOBILE CALENDAR FIX
+========================================= */
+
+@media (max-width: 768px) {
+
+  /* BOOKING CONTAINER */
+  #book .rounded-\[28px\] {
+    padding: 14px !important;
+  }
+
+  /* CALENDAR WRAPPER */
+  .rdp {
+    --rdp-cell-size: 38px;
+
+    width: 100%;
+
+    font-size: 12px;
+
+    overflow: hidden;
+  }
+
+  /* MONTH */
+  .rdp-month {
+    width: 100%;
+  }
+
+  /* TABLE */
+  .rdp-table {
+    width: 100%;
+
+    border-spacing: 3px;
+  }
+
+  /* DAY BUTTONS */
+  .rdp-button {
+    width: 38px !important;
+    height: 38px !important;
+
+    border-radius: 12px;
+
+    font-size: 13px;
+  }
+
+  /* HEADER DAYS */
+  .rdp-head_cell {
+    font-size: 11px;
+  }
+
+  /* MONTH TITLE */
+  .rdp-caption_label {
+    font-size: 1.2rem !important;
+  }
+
+  /* NAVIGATION BUTTONS */
+  .rdp-nav_button {
+    width: 34px;
+    height: 34px;
+  }
+
+  /* SLOT GRID */
+  .slot-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  /* SLOT BUTTON */
+  .slot-btn {
+    min-height: 62px;
+
+    padding: 10px;
+
+    font-size: 13px;
+  }
+}
+
+/* EXTRA SMALL DEVICES */
+@media (max-width: 480px) {
+
+  .rdp {
+    --rdp-cell-size: 34px;
+  }
+
+  .rdp-button {
+    width: 34px !important;
+    height: 34px !important;
+
+    font-size: 12px;
+  }
+
+  .rdp-caption_label {
+    font-size: 1rem !important;
+  }
+
+  .slot-btn {
+    min-height: 56px;
+
+    font-size: 12px;
+  }
+}
