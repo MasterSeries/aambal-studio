@@ -158,7 +158,7 @@ Time: ${selectedSlot}`
     } catch (err) {
       console.error(err);
 
-      alert("Booking Failed");
+      
     } finally {
       setLoading(false);
     }
