@@ -205,7 +205,7 @@ function CustomerHistory() {
         )}
 
         {/* BOOKINGS */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr] items-start">
           
           {bookings.map(
             (booking) => (
