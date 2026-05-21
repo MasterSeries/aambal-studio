@@ -285,7 +285,7 @@
   width: 100%;
   margin: auto;
 
-  --rdp-cell-size: 54px;
+  --rdp-cell-size: 42px;
   --rdp-accent-color: #ff6ba6;
   --rdp-background-color: rgba(255,255,255,0.08);
 }
@@ -298,7 +298,8 @@
   width: 100%;
   max-width: 100%;
   border-collapse: separate;
-  border-spacing: 10px;
+  border-spacing: 4px;
+  table-layout: fixed;
 }
 
 .rdp-head_cell {
@@ -357,7 +358,7 @@
 }
 
 .rdp-caption_label {
-  font-size: 2rem;
+  font-size: 1.4rem;
 
   font-family: var(--font-display);
 
@@ -373,8 +374,8 @@
 }
 
 .rdp-nav_button {
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
 
   border-radius: 14px;
 
@@ -832,5 +833,40 @@ img {
 
   .rdp-caption_label {
     font-size: 0.95rem !important;
+  }
+}
+
+
+/* PORTRAIT PHONE FIX */
+@media (max-width: 480px) {
+
+  .rdp {
+    --rdp-cell-size: 30px !important;
+  }
+
+  .rdp-table {
+    border-spacing: 2px !important;
+  }
+
+  .rdp-button {
+    width: 30px !important;
+    height: 30px !important;
+
+    min-width: 30px !important;
+    min-height: 30px !important;
+
+    font-size: 10px !important;
+  }
+
+  .rdp-caption_label {
+    font-size: 1rem !important;
+  }
+
+  .slot-btn {
+    min-height: 46px !important;
+
+    font-size: 11px !important;
+
+    padding: 6px !important;
   }
 }
