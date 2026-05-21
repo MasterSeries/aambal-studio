@@ -426,7 +426,7 @@ setSelectedSlots([]);
   onSubmit={onSubmit}
   className="grid w-full max-w-full gap-6 overflow-hidden"
 >
-      <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[1fr_1.1fr]">
+      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] xl:grid-cols-[1fr_1.2fr]">
         
         {/* LEFT */}
         <div className="space-y-5">
@@ -616,7 +616,7 @@ setSelectedSlots([]);
         </div>
 
         {/* CALENDAR */}
-        <div className="w-full max-w-full overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.04] p-3 sm:p-5 backdrop-blur-2xl">
+        <div className="w-full overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] p-3 sm:p-5 backdrop-blur-2xl">
           
           <SlotCalendar
   blockedDates={
