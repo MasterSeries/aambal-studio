@@ -870,3 +870,66 @@ img {
     padding: 6px !important;
   }
 }
+
+/* FINAL PORTRAIT OVERFLOW FIX */
+
+@media (max-width: 480px) {
+
+  #book {
+    padding-inline: 8px !important;
+  }
+
+  #book .rounded-\[24px\] {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    overflow: hidden !important;
+  }
+
+  .rdp {
+    width: 100% !important;
+
+    max-width: 100% !important;
+
+    overflow: hidden !important;
+
+    --rdp-cell-size: 28px !important;
+  }
+
+  .rdp-months {
+    width: 100%;
+  }
+
+  .rdp-month {
+    width: 100%;
+  }
+
+  .rdp-table {
+    width: 100% !important;
+
+    border-spacing: 1px !important;
+
+    table-layout: fixed;
+  }
+
+  .rdp-button {
+    width: 26px !important;
+    height: 26px !important;
+
+    min-width: 26px !important;
+    min-height: 26px !important;
+
+    font-size: 9px !important;
+
+    border-radius: 6px !important;
+  }
+
+  .rdp-caption_label {
+    font-size: 0.9rem !important;
+  }
+
+  .rdp-nav_button {
+    width: 24px !important;
+    height: 24px !important;
+  }
+}
