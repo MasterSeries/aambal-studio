@@ -768,113 +768,54 @@ img {
   }
 }
 /* =========================================
-   FINAL MOBILE CALENDAR FIX
+   FINAL MOBILE FIX
 ========================================= */
 
 @media (max-width: 768px) {
 
-  /* BOOKING CARD */
-  #book .rounded-\[28px\] {
+  body {
+    overflow-x: hidden;
+  }
+
+  #book {
+    padding-inline: 12px;
+  }
+
+  .slot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
     width: 100%;
-    max-width: 100%;
-    overflow: hidden;
+  }
+
+  .slot-btn {
+    width: 100%;
+    min-height: 50px;
+
+    padding: 8px;
+
+    font-size: 12px;
+
+    border-radius: 14px;
+  }
+
+  .drone-card {
+    width: 100%;
     padding: 14px !important;
   }
 
-  /* CALENDAR ROOT */
   .rdp {
     width: 100% !important;
-    max-width: 100% !important;
 
-    overflow-x: hidden;
-
-    --rdp-cell-size: 32px;
-
-    font-size: 11px;
-  }
-
-  /* MONTH */
-  .rdp-month {
-    width: 100% !important;
-  }
-
-  /* TABLE */
-  .rdp-table {
-    width: 100% !important;
-
-    max-width: 100% !important;
-
-    border-spacing: 2px !important;
-
-    table-layout: fixed;
-  }
-
-  /* HEADER */
-  .rdp-head_cell {
-    font-size: 10px !important;
-    padding: 0 !important;
-  }
-
-  /* ROW */
-  .rdp-row {
-    width: 100%;
-  }
-
-  /* CELL */
-  .rdp-cell {
-    padding: 0 !important;
-  }
-
-  /* BUTTON */
-  .rdp-button {
-    width: 32px !important;
-    height: 32px !important;
-
-    min-width: 32px !important;
-    min-height: 32px !important;
-
-    border-radius: 10px !important;
-
-    font-size: 11px !important;
-
-    padding: 0 !important;
-
-    margin: auto;
-  }
-
-  /* MONTH TITLE */
-  .rdp-caption_label {
-    font-size: 1rem !important;
-  }
-
-  /* NAV BUTTONS */
-  .rdp-nav_button {
-    width: 28px !important;
-    height: 28px !important;
-  }
-
-  /* SLOT GRID */
-  .slot-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
-
-  /* SLOT BUTTONS */
-  .slot-btn {
-    width: 100%;
-    min-height: 54px;
-
-    padding: 8px !important;
-
-    font-size: 12px !important;
-  }
-}
-
-/* EXTRA SMALL */
-@media (max-width: 420px) {
-
-  .rdp {
     --rdp-cell-size: 28px;
+
+    font-size: 10px !important;
+  }
+
+  .rdp-table {
+    width: 100%;
+    table-layout: fixed;
+    border-spacing: 2px;
   }
 
   .rdp-button {
@@ -885,176 +826,11 @@ img {
     min-height: 28px !important;
 
     font-size: 10px !important;
+
+    border-radius: 8px;
   }
 
   .rdp-caption_label {
-    font-size: 0.9rem !important;
-  }
-
-  .slot-btn {
-    min-height: 50px;
-    font-size: 11px !important;
-  }
-}
-/* FORCE MOBILE CALENDAR */
-.custom-calendar {
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.custom-calendar .rdp-months {
-  width: 100%;
-}
-
-.custom-calendar .rdp-month {
-  width: 100%;
-}
-
-.custom-calendar .rdp-table {
-  width: 100%;
-}
-
-/* =========================================
-   FINAL MOBILE BOOKING FIX
-========================================= */
-
-@media (max-width: 768px) {
-
-  body {
-    overflow-x: hidden;
-  }
-
-  .slot-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px;
-    width: 100%;
-  }
-
-  .slot-btn {
-    width: 100% !important;
-    min-height: 64px;
-    font-size: 16px;
-  }
-
-  .drone-card {
-    width: 100%;
-    padding: 16px !important;
-  }
-
-  textarea {
-    width: 100%;
-  }
-
-  .custom-calendar {
-    width: 100%;
-    overflow: hidden;
-  }
-
-  .rdp {
-    width: 100% !important;
-    --rdp-cell-size: 34px;
-  }
-
-  .rdp-button {
-    width: 34px !important;
-    height: 34px !important;
-    min-width: 34px !important;
-    min-height: 34px !important;
-    font-size: 11px !important;
-  }
-}
-
- /* =========================================
-   MOBILE BOOKING CALENDAR FIX
-========================================= */
-
-.slot-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.slot-btn {
-  width: 100%;
-  min-height: 64px;
-  font-size: 15px;
-  border-radius: 18px;
-}
-
-/* MOBILE */
-@media (max-width: 768px) {
-
-  body {
-    overflow-x: hidden;
-  }
-
-  /* MAIN CONTAINER */
-  .space-y-10 {
-    width: 100%;
-    overflow: hidden;
-  }
-
-  /* CALENDAR CARD */
-  .rounded-3xl {
-    padding: 16px !important;
-    overflow: hidden;
-  }
-
-  /* SLOT GRID */
-  .slot-grid {
-    grid-template-columns: 1fr !important;
-  }
-
-  /* SLOT BUTTON */
-  .slot-btn {
-    width: 100% !important;
-    min-height: 60px;
-    font-size: 16px;
-  }
-
-  /* CALENDAR */
-  .rdp {
-    width: 100% !important;
-
-    --rdp-cell-size: 34px;
-
-    font-size: 12px;
-  }
-
-  .rdp-month {
-    width: 100%;
-  }
-
-  .rdp-table {
-    width: 100%;
-    table-layout: fixed;
-  }
-
-  .rdp-button {
-    width: 34px !important;
-    height: 34px !important;
-
-    min-width: 34px !important;
-    min-height: 34px !important;
-
-    font-size: 11px !important;
-
-    border-radius: 10px;
-  }
-
-  .rdp-caption_label {
-    font-size: 1rem !important;
-  }
-
-  /* INPUTS */
-  input {
-    width: 100%;
-  }
-
-  /* BUTTON */
-  button {
-    max-width: 100%;
+    font-size: 0.95rem !important;
   }
 }
