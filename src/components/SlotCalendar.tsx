@@ -129,44 +129,40 @@ export function SlotCalendar({
   className="custom-calendar mx-auto"
 
   styles={{
-    month: {
-      width: "100%",
-    },
+  month: {
+    width: "100%",
+  },
 
-    table: {
-      width: "100%",
-      tableLayout: "fixed",
-    },
+  table: {
+    width: "100%",
+  },
 
-    head_cell: {
-      width: "32px",
-      height: "32px",
-      fontSize: "11px",
-    },
+  head_cell: {
+    padding: "10px",
+    fontSize: "14px",
+  },
 
-    cell: {
-      width: "32px",
-      height: "32px",
-      padding: "0",
-    },
+  cell: {
+    padding: "6px",
+  },
 
-    day: {
-      width: "32px",
-      height: "32px",
-      margin: "auto",
-      fontSize: "11px",
-      borderRadius: "10px",
-    },
+  day: {
+    width: "44px",
+    height: "44px",
+    fontSize: "14px",
+    borderRadius: "14px",
+  },
 
-    caption_label: {
-      fontSize: "1rem",
-    },
+  caption_label: {
+    fontSize: "1.5rem",
+    fontWeight: "700",
+  },
 
-    nav_button: {
-      width: "28px",
-      height: "28px",
-    },
-  }}
+  nav_button: {
+    width: "36px",
+    height: "36px",
+  },
+}}
 />
       </div>
 
