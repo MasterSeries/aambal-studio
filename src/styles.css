@@ -1113,10 +1113,6 @@ img {
    PREMIUM DESKTOP BALANCE
 ========================================= */
 
-.calendar-card {
-  max-width: 360px;
-  margin-inline: auto;
-}
 
 .slot-grid button {
   min-height: 84px;
@@ -1125,9 +1121,10 @@ img {
 /* DESKTOP */
 @media (min-width: 1024px) {
 
-  .calendar-card {
-    max-width: 340px;
-  }
+.calendar-card {
+  width: 100%;
+  min-width: 420px;
+}
 
   .slot-grid {
     grid-template-columns: repeat(2, 1fr);

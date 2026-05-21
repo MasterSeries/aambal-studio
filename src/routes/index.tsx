@@ -380,7 +380,7 @@ function Home() {
 
       {/* BOOKING */}
       <Section id="book">
-  <div className="grid gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:gap-16 items-start">
+  <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16 items-start">
 
     {/* LEFT CONTENT */}
     <div className="max-w-[440px]">
