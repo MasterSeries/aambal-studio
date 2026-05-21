@@ -380,41 +380,70 @@ function Home() {
 
       {/* BOOKING */}
       <Section id="book">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20 items-start">
+  <div className="grid gap-10 lg:grid-cols-[0.75fr_1.25fr] lg:gap-16 items-start">
+
+    {/* LEFT CONTENT */}
+    <div className="max-w-[440px]">
+
+      <p className="text-xs uppercase tracking-[0.3em] text-primary mb-4">
+        Reserve a slot
+      </p>
+
+      <h2 className="font-display max-w-[400px] text-4xl leading-[0.95] tracking-[-0.03em] md:text-5xl xl:text-6xl mb-5">
+        The dates fill{" "}
+        <span className="italic text-gradient-gold">fast.</span>
+      </h2>
+
+      <p className="max-w-[400px] text-base leading-relaxed text-muted-foreground mb-8 xl:text-lg">
+        We take a limited number of bookings each festival night so every family gets undivided
+        attention. Tell us what you need — we'll confirm by WhatsApp within 24 hours.
+      </p>
+
+      <div className="max-w-[400px] space-y-5 text-sm">
+
+        <div className="flex items-start gap-3">
+          <span className="text-primary mt-0.5">✦</span>
           <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-primary mb-4">Reserve a slot</p>
-            <h2 className="font-display text-5xl md:text-6xl mb-6">
-              The dates fill <span className="italic text-gradient-gold">fast.</span>
-            </h2>
-            <p className="text-lg text-muted-foreground mb-10">
-              We take a limited number of bookings each festival night so every family gets undivided
-              attention. Tell us what you need — we'll confirm by WhatsApp within 24 hours.
-            </p>
-            <div className="space-y-4 text-sm">
-              <div className="flex items-start gap-3">
-                <span className="text-primary mt-0.5">✦</span>
-                <div>
-                  <div className="font-medium">No advance for portrait sittings</div>
-                  <div className="text-muted-foreground">Pay only on the day of shoot.</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-primary mt-0.5">✦</span>
-                <div>
-                  <div className="font-medium">20% advance for full-day & bridal</div>
-                  <div className="text-muted-foreground">Refundable up to 7 days prior.</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="text-primary mt-0.5">✦</span>
-                <div>
-                  <div className="font-medium">Drone subject to weather clearance</div>
-                  <div className="text-muted-foreground">Free reschedule if grounded.</div>
-                </div>
-              </div>
+            <div className="font-medium">
+              No advance for portrait sittings
+            </div>
+
+            <div className="text-muted-foreground">
+              Pay only on the day of shoot.
             </div>
           </div>
+        </div>
 
+        <div className="flex items-start gap-3">
+          <span className="text-primary mt-0.5">✦</span>
+
+          <div>
+            <div className="font-medium">
+              20% advance for full-day & bridal
+            </div>
+
+            <div className="text-muted-foreground">
+              Refundable up to 7 days prior.
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-3">
+          <span className="text-primary mt-0.5">✦</span>
+
+          <div>
+            <div className="font-medium">
+              Drone subject to weather clearance
+            </div>
+
+            <div className="text-muted-foreground">
+              Free reschedule if grounded.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
           <div className="rounded-[28px] border border-border bg-card/40 p-3 sm:p-6 md:p-10 backdrop-blur-2xl overflow-hidden">
             <BookingForm />
           </div>
