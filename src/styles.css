@@ -1109,3 +1109,51 @@ img {
     height: 22px !important;
   }
 }
+/* =========================================
+   PREMIUM DESKTOP BALANCE
+========================================= */
+
+.calendar-card {
+  max-width: 360px;
+  margin-inline: auto;
+}
+
+.slot-grid button {
+  min-height: 84px;
+}
+
+/* DESKTOP */
+@media (min-width: 1024px) {
+
+  .calendar-card {
+    max-width: 340px;
+  }
+
+  .slot-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .slot-grid button {
+    min-height: 76px;
+
+    font-size: 1rem;
+  }
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+
+  .calendar-card {
+    max-width: 100%;
+  }
+
+  .slot-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .slot-grid button {
+    min-height: 56px;
+
+    font-size: 0.85rem;
+  }
+}

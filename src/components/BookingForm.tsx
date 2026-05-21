@@ -426,7 +426,7 @@ setSelectedSlots([]);
   onSubmit={onSubmit}
   className="grid w-full max-w-full gap-6 overflow-hidden"
 >
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr] xl:grid-cols-[1fr_1.2fr]">
+      <div className="grid gap-5 lg:grid-cols-[1.2fr_0.95fr] xl:grid-cols-[1.3fr_0.9fr] items-start">
         
         {/* LEFT */}
         <div className="space-y-5">
