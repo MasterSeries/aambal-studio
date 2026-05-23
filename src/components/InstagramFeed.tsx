@@ -3,7 +3,7 @@ import { useState } from "react";
 import hero from "@/assets/hero-festival.jpg";
 import aerial from "@/assets/drone-aerial.jpg";
 import portrait from "@/assets/portrait-festival.jpg";
-import lily from "@/assets/lily-field.jpg";
+import lily from "@/assets/hero-festival.jpg";
 
 type Post = {
   type: "image" | "video";
