@@ -4,7 +4,7 @@ import ShootManager from "@/pages/admin/ShootManager";
 
 export const Route =
   createFileRoute(
-    "/admin/shoot-editor"
+    "/shoot-manager"
   )({
     component: ShootManager,
   });

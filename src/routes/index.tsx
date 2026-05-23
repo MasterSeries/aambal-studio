@@ -8,6 +8,8 @@ import hero from "@/assets/hero-festival.jpg";
 import aerial from "@/assets/drone-aerial.jpg";
 import portrait from "@/assets/portrait-festival.jpg";
 import { InstagramFeed } from "@/components/InstagramFeed";
+
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -155,12 +157,19 @@ function Home() {
             >
               Book a shoot
             </a>
+            
             <a
               href="#drone"
               className="rounded-full border border-border px-8 py-4 font-medium text-foreground transition hover:border-primary hover:text-primary"
             >
               See drone work →
             </a>
+            <a
+  href="/packages"
+  className="rounded-full border border-pink-500 bg-pink-500/10 px-8 py-4 font-medium text-pink-300 transition hover:bg-pink-500 hover:text-white"
+>
+  View Packages
+</a>
           </motion.div>
 
           <div className="mt-20 flex items-end justify-between text-xs uppercase tracking-[0.25em] text-muted-foreground">

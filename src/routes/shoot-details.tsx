@@ -6,9 +6,5 @@ export const Route =
   createFileRoute(
     "/shoot-details"
   )({
-    component: Page,
+    component: ShootDetails,
   });
-
-function Page() {
-  return <ShootDetails />;
-}

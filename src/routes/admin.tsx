@@ -483,7 +483,7 @@ const [statusFilter, setStatusFilter] =
       Download Analytics PDF
     </button>
 
-    <Link to="/admin/shoot-editor">
+    <Link to="/shoot-manager">
 
       <button className="rounded-2xl bg-purple-500 px-6 py-4 text-lg font-bold transition hover:bg-purple-400">
 

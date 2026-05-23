@@ -1,99 +1,163 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore";
+
+import {
+  collection,
+  onSnapshot,
+} from "firebase/firestore";
+
 import { db } from "@/lib/firebase";
-import { motion } from "motion/react";
 
 export default function ShootDetails() {
-  const [data, setData] = useState<any>(null);
+
+  const [posts, setPosts] =
+    useState<any[]>([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
 
   useEffect(() => {
-    async function fetchData() {
-      const ref = doc(db, "shoot_details", "main");
-      const snap = await getDoc(ref);
 
-      if (snap.exists()) {
-        setData(snap.data());
-      }
+    try {
+
+      const unsubscribe =
+        onSnapshot(
+
+          collection(
+            db,
+            "instagram_posts"
+          ),
+
+          (snapshot) => {
+
+            const arr: any[] = [];
+
+            snapshot.forEach((doc) => {
+
+              arr.push({
+                id: doc.id,
+                ...doc.data(),
+              });
+
+            });
+
+            setPosts(arr);
+
+            setLoading(false);
+
+          },
+
+          (err) => {
+
+            console.error(err);
+
+            setError(
+              "Failed to load data"
+            );
+
+            setLoading(false);
+
+          }
+        );
+
+      return () => unsubscribe();
+
+    } catch (err) {
+
+      console.error(err);
+
+      setError(
+        "Something went wrong"
+      );
+
+      setLoading(false);
+
     }
 
-    fetchData();
   }, []);
 
-  if (!data) {
+  if (loading) {
+
     return (
-      <div className="min-h-screen flex items-center justify-center text-white">
+      <div className="flex min-h-screen items-center justify-center bg-black text-white">
+
         Loading...
+
       </div>
     );
+
+  }
+
+  if (error) {
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black text-red-400">
+
+        {error}
+
+      </div>
+    );
+
   }
 
   return (
-    <div className="bg-black min-h-screen text-white px-6 py-24">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-black text-white p-10">
 
-        <motion.h1
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-6xl font-bold mb-8"
-        >
-          {data.title}
-        </motion.h1>
+      <div className="mx-auto max-w-7xl">
 
-        <p className="text-white/70 text-lg max-w-3xl mb-10">
-          {data.description}
-        </p>
+        <h1 className="mb-10 text-6xl font-black">
 
-        <div className="grid md:grid-cols-3 gap-6 mb-16">
-          {data.images?.map((img: string, i: number) => (
-            <img
-              key={i}
-              src={img}
-              className="rounded-3xl h-[300px] object-cover w-full"
-            />
-          ))}
-        </div>
+          Luxury Shoots
 
-        <div className="mb-10">
-          <h2 className="text-4xl mb-6">
-            Packages
-          </h2>
+        </h1>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {data.plans?.map((plan: any, i: number) => (
-              <div
-                key={i}
-                className="bg-white/5 border border-white/10 rounded-3xl p-8"
-              >
-                <h3 className="text-2xl font-semibold mb-3">
-                  {plan.name}
-                </h3>
+        {posts.length === 0 && (
 
-                <div className="text-5xl font-bold text-primary mb-5">
-                  ₹{plan.price}
+          <div className="text-white/50">
+
+            No posts found
+
+          </div>
+
+        )}
+
+        <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+
+          {posts.map((post) => (
+
+            <div
+              key={post.id}
+              className="overflow-hidden rounded-[32px] border border-white/10 bg-white/[0.03]"
+            >
+
+              <video
+                src={post.src}
+                controls
+                className="h-[500px] w-full object-cover bg-black"
+              />
+
+              <div className="p-5">
+
+                <div className="text-2xl font-bold">
+
+                  {post.caption}
+
                 </div>
 
-                <ul className="space-y-3">
-                  {plan.features?.map(
-                    (feature: string, idx: number) => (
-                      <li key={idx}>
-                        ✨ {feature}
-                      </li>
-                    )
-                  )}
-                </ul>
+                <div className="mt-2 text-pink-300">
+
+                  ♥ {post.likes}
+
+                </div>
+
               </div>
-            ))}
-          </div>
-        </div>
 
-        <div className="bg-primary/10 border border-primary/30 rounded-3xl p-8">
-          <h3 className="text-3xl mb-4">
-            Special Offer
-          </h3>
+            </div>
 
-          <p className="text-xl">
-            {data.offer}
-          </p>
+          ))}
+
         </div>
 
       </div>
