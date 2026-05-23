@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ShootDetailsRouteImport } from './routes/shoot-details'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -22,10 +23,16 @@ import { Route as CustomerGalleryRouteImport } from './routes/customer-gallery'
 import { Route as CustomerDashboardRouteImport } from './routes/customer-dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminShootEditorRouteImport } from './routes/admin.shoot-editor'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShootDetailsRoute = ShootDetailsRouteImport.update({
+  id: '/shoot-details',
+  path: '/shoot-details',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -88,10 +95,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminShootEditorRoute = AdminShootEditorRouteImport.update({
+  id: '/shoot-editor',
+  path: '/shoot-editor',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/customer-dashboard': typeof CustomerDashboardRoute
   '/customer-gallery': typeof CustomerGalleryRoute
   '/customer-history': typeof CustomerHistoryRoute
@@ -102,11 +114,13 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/shoot-details': typeof ShootDetailsRoute
   '/signup': typeof SignupRoute
+  '/admin/shoot-editor': typeof AdminShootEditorRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/customer-dashboard': typeof CustomerDashboardRoute
   '/customer-gallery': typeof CustomerGalleryRoute
   '/customer-history': typeof CustomerHistoryRoute
@@ -117,12 +131,14 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/shoot-details': typeof ShootDetailsRoute
   '/signup': typeof SignupRoute
+  '/admin/shoot-editor': typeof AdminShootEditorRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/customer-dashboard': typeof CustomerDashboardRoute
   '/customer-gallery': typeof CustomerGalleryRoute
   '/customer-history': typeof CustomerHistoryRoute
@@ -133,7 +149,9 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/shoot-details': typeof ShootDetailsRoute
   '/signup': typeof SignupRoute
+  '/admin/shoot-editor': typeof AdminShootEditorRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,7 +168,9 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/profile'
+    | '/shoot-details'
     | '/signup'
+    | '/admin/shoot-editor'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -165,7 +185,9 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/profile'
+    | '/shoot-details'
     | '/signup'
+    | '/admin/shoot-editor'
   id:
     | '__root__'
     | '/'
@@ -180,12 +202,14 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/profile'
+    | '/shoot-details'
     | '/signup'
+    | '/admin/shoot-editor'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   CustomerDashboardRoute: typeof CustomerDashboardRoute
   CustomerGalleryRoute: typeof CustomerGalleryRoute
   CustomerHistoryRoute: typeof CustomerHistoryRoute
@@ -196,6 +220,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
+  ShootDetailsRoute: typeof ShootDetailsRoute
   SignupRoute: typeof SignupRoute
 }
 
@@ -206,6 +231,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shoot-details': {
+      id: '/shoot-details'
+      path: '/shoot-details'
+      fullPath: '/shoot-details'
+      preLoaderRoute: typeof ShootDetailsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -292,12 +324,29 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/shoot-editor': {
+      id: '/admin/shoot-editor'
+      path: '/shoot-editor'
+      fullPath: '/admin/shoot-editor'
+      preLoaderRoute: typeof AdminShootEditorRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminShootEditorRoute: typeof AdminShootEditorRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminShootEditorRoute: AdminShootEditorRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   CustomerDashboardRoute: CustomerDashboardRoute,
   CustomerGalleryRoute: CustomerGalleryRoute,
   CustomerHistoryRoute: CustomerHistoryRoute,
@@ -308,6 +357,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
+  ShootDetailsRoute: ShootDetailsRoute,
   SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport

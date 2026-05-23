@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import RealtimeNotifications from "@/components/RealtimeNotifications";
-
+import { Link } from "@tanstack/react-router";
 import { GalleryUpload } from "@/components/GalleryUpload";
 import { RealCalendar } from "@/components/RealCalendar";
 import {
@@ -458,6 +458,54 @@ const [statusFilter, setStatusFilter] =
       <div className="mx-auto max-w-7xl">
         
         {/* HEADER */}
+<div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+
+  <div>
+
+    <h1 className="text-4xl font-black md:text-5xl">
+      Admin Dashboard
+    </h1>
+
+    <p className="mt-3 text-white/50">
+      Premium Booking Management
+    </p>
+
+  </div>
+
+  <div className="flex flex-wrap gap-4">
+
+    <button
+      onClick={
+        downloadAnalyticsPDF
+      }
+      className="rounded-2xl bg-pink-500 px-6 py-4 text-lg font-bold transition hover:bg-pink-400"
+    >
+      Download Analytics PDF
+    </button>
+
+    <Link to="/admin/shoot-editor">
+
+      <button className="rounded-2xl bg-purple-500 px-6 py-4 text-lg font-bold transition hover:bg-purple-400">
+
+        Manage Shoots
+
+      </button>
+
+    </Link>
+
+    <Link to="/shoot-details">
+
+      <button className="rounded-2xl bg-cyan-500 px-6 py-4 text-lg font-bold transition hover:bg-cyan-400">
+
+        View Shoot Page
+
+      </button>
+
+    </Link>
+
+  </div>
+
+</div>
         {/* SEARCH + FILTER */}
 <div className="mb-10 rounded-[32px] border border-white/10 bg-white/[0.03] p-5 backdrop-blur-2xl">
   
