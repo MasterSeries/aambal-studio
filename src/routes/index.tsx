@@ -7,7 +7,7 @@ import { BookingForm } from "@/components/BookingForm";
 import hero from "@/assets/hero-festival.jpg";
 import aerial from "@/assets/drone-aerial.jpg";
 import portrait from "@/assets/portrait-festival.jpg";
-
+import { InstagramFeed } from "@/components/InstagramFeed";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -377,7 +377,7 @@ function Home() {
           ))}
         </div>
       </Section>
-
+<InstagramFeed />
       {/* BOOKING */}
       <Section id="book">
   <div className="grid gap-10 xl:grid-cols-[0.9fr_1.4fr] items-start">
