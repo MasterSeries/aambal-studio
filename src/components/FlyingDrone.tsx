@@ -25,14 +25,7 @@ export function FlyingDrone() {
         const rect = el.getBoundingClientRect();
         const padCenterY = rect.top + window.scrollY + rect.height / 2;
         const padCenterX = rect.left + rect.width / 2;
-        setPad({
-  y: padCenterY - 60,
-
-  x:
-    window.innerWidth < 768
-      ? padCenterX - 45
-      : padCenterX - 75,
-});
+        setPad({ y: padCenterY - 60, x: padCenterX - 75 });
       }
     };
     measure();
@@ -48,10 +41,7 @@ export function FlyingDrone() {
 
   useEffect(() => {
     const startY = 140; // hero altitude (viewport units)
-    const startX =
-  vw < 768
-    ? vw * 0.02
-    : vw * 0.08;
+    const startX = vw * 0.08;
 
     const update = () => {
       const sy = window.scrollY;
@@ -101,7 +91,7 @@ export function FlyingDrone() {
     <motion.div
       aria-hidden
       style={{ x: smoothX, y: smoothY, rotate: smoothRot }}
-      className="pointer-events-none fixed left-0 top-0 z-40 block"
+      className="pointer-events-none absolute left-0 top-0 z-40 block"
     >
       {/* flying drone (bobs) */}
       <motion.div style={{ opacity: flyingOpacity }} className="animate-drift relative">
