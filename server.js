@@ -2,24 +2,86 @@ import express from "express";
 
 import cors from "cors";
 
-import twilio from "twilio";
-import dotenv from "dotenv";
+import qrcode from "qrcode-terminal";
 
-dotenv.config();
+import {
+  default as makeWASocket,
+  useMultiFileAuthState,
+} from "@whiskeysockets/baileys";
+
 const app = express();
 
 app.use(cors());
 
 app.use(express.json());
-const client = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
 
+let sock;
+
+async function connectWhatsApp() {
+
+  const {
+    state,
+    saveCreds,
+  } =
+    await useMultiFileAuthState(
+      "auth"
+    );
+
+  sock = makeWASocket({
+    auth: state,
+  });
+
+  sock.ev.on(
+    "creds.update",
+    saveCreds
+  );
+
+  sock.ev.on(
+  "connection.update",
+  async ({
+    connection,
+    qr,
+    lastDisconnect,
+  }) => {
+
+    if (qr) {
+
+      qrcode.generate(qr, {
+        small: true,
+      });
+
+    }
+
+    if (
+      connection ===
+      "open"
+    ) {
+
+      console.log(
+        "✅ WhatsApp Connected"
+      );
+
+    }
+
+    if (
+      connection ===
+      "close"
+    ) {
+
+      console.log(
+        "⚠️ Connection closed"
+      );
+
+      connectWhatsApp();
+    }
+  }
+);
+}
+
+connectWhatsApp();
 
 app.post(
-  "/send-whatsapp",
-
+  "/send-message",
   async (req, res) => {
 
     try {
@@ -29,18 +91,14 @@ app.post(
         message,
       } = req.body;
 
-      await client.messages.create({
+      await sock.sendMessage(
+        `${phone}@s.whatsapp.net`,
+        {
+          text: message,
+        }
+      );
 
-        from:
-          "whatsapp:+14155238886",
-
-        to:
-          `whatsapp:${phone}`,
-
-        body: message,
-      });
-
-      res.send({
+      res.json({
         success: true,
       });
 
@@ -48,7 +106,10 @@ app.post(
 
       console.error(err);
 
-      res.status(500).send(err);
+      res.status(500).json({
+        success: false,
+      });
+
     }
   }
 );
@@ -56,11 +117,7 @@ app.post(
 app.listen(5000, () => {
 
   console.log(
-    "WhatsApp server running on port 5000"
+    "🚀 Server running on port 5000"
   );
-});
-const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
 });

@@ -294,9 +294,15 @@ export function BookingForm({
       }
 
       // SAVE
-      await addDoc(
+      const bookingRef =
+  `AV-${Date.now()}`;
+
+await addDoc(
   collection(db, "bookings"),
   {
+    reference:
+      bookingRef,
+
     uid:
       auth.currentUser?.uid ||
       null,
@@ -333,27 +339,34 @@ export function BookingForm({
   }
 );
 
-      // WHATSAPP
-      // AUTOMATIC WHATSAPP MESSAGE
+
+
+// PROFESSIONAL WHATSAPP MESSAGE
+
 try {
 
   await sendWhatsAppMessage(
     parsed.data.phone,
 
-    `✨ Booking Confirmed
+    {
+      name:
+        parsed.data.name,
 
-👤 ${parsed.data.name}
+      packageName:
+        parsed.data.package,
 
-📅 ${selectedDate.toDateString()}
+      price:
+        selectedPlan.price,
 
-⏰ ${selectedSlots.join(", ")}
+      date:
+        selectedDate.toDateString(),
 
-📦 ${parsed.data.package}
+      time:
+        selectedSlots.join(", "),
 
-🚁 Drone:
-${drone ? "Yes" : "No"}
-
-Aambal Vasantham Studio`
+      reference:
+        bookingRef,
+    }
   );
 
 } catch (whatsappErr) {
@@ -364,62 +377,56 @@ Aambal Vasantham Studio`
   );
 }
 
+
+
+/* SUCCESS FLOW */
+
 setBurst((b) => b + 1);
 
 toast.success(
   "✨ Booking Confirmed Successfully"
 );
 
+onBookingComplete({
+  name:
+    parsed.data.name,
+
+  phone:
+    parsed.data.phone,
+
+  email:
+    parsed.data.email,
+
+  date:
+    selectedDate.toDateString(),
+
+  time:
+    selectedSlots.join(", "),
+
+  reference:
+    bookingRef,
+});
+
 setLoading(false);
 
-alert(
-  "Booking Confirmed"
-);
-
-try {
-
-  await Promise.resolve(
-    onBookingComplete({
-      name:
-        parsed.data.name,
-
-      phone:
-        parsed.data.phone,
-
-      email:
-        parsed.data.email,
-
-      date:
-        selectedDate.toDateString(),
-
-      time:
-        selectedSlots.join(", "),
-    })
-  );
-
-} catch (err) {
-
-  console.error(
-    "Parent callback failed:",
-    err
-  );
-
-}
-
-      
-      
-    } catch (err) {
-      console.error(err);
-
-      toast.error(
-        "Booking failed"
-      );
-    } 
-    e.currentTarget.reset();
+e.currentTarget.reset();
 
 setSelectedDate(null);
 
 setSelectedSlots([]);
+      
+      
+    } catch (err) {
+
+  console.error(err);
+
+  toast.error(
+    "Booking failed"
+  );
+
+  setLoading(false);
+}
+   
   }
 
 
