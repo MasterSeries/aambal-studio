@@ -427,7 +427,15 @@ function Home() {
       </div>
     </div>
           <div className="rounded-[28px] border border-border bg-card/40 p-3 sm:p-6 md:p-10 backdrop-blur-2xl overflow-hidden">
-            <BookingForm />
+            <BookingForm
+
+  selectedPlan={{
+    name: "Festival Portrait",
+    price: "₹4,999",
+  }}
+
+  onBookingComplete={() => {}}
+/>
           </div>
         </div>
       </Section>

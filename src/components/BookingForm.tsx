@@ -49,7 +49,17 @@ const schema = z.object({
 
   notes: z.string().optional(),
 });
+type BookingFormProps = {
 
+  selectedPlan: {
+    name: string;
+    price: string;
+  };
+
+  onBookingComplete: (
+    bookingData: any
+  ) => void;
+};
 const packages = [
   "Festival Portrait — ₹4,999",
 
@@ -82,7 +92,10 @@ const PETAL_COLORS = [
   "#ffffff",
 ];
 
-export function BookingForm() {
+export function BookingForm({
+  selectedPlan,
+  onBookingComplete,
+}: BookingFormProps) {
   const [pkg, setPkg] =
     useState(packages[0]);
 
@@ -357,6 +370,41 @@ toast.success(
   "✨ Booking Confirmed Successfully"
 );
 
+setLoading(false);
+
+alert(
+  "Booking Confirmed"
+);
+
+try {
+
+  await Promise.resolve(
+    onBookingComplete({
+      name:
+        parsed.data.name,
+
+      phone:
+        parsed.data.phone,
+
+      email:
+        parsed.data.email,
+
+      date:
+        selectedDate.toDateString(),
+
+      time:
+        selectedSlots.join(", "),
+    })
+  );
+
+} catch (err) {
+
+  console.error(
+    "Parent callback failed:",
+    err
+  );
+
+}
 
       
       
@@ -366,9 +414,7 @@ toast.success(
       toast.error(
         "Booking failed"
       );
-    } finally {
-      setLoading(false);
-    }
+    } 
     e.currentTarget.reset();
 
 setSelectedDate(null);
