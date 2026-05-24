@@ -219,8 +219,11 @@ export default function RealtimeNotifications() {
         .notif-panel {
           position: absolute;
           top: calc(100% + 12px);
-          right: 0;
-          width: min(400px, 92vw);
+          overflow: hidden;
+          backdrop-filter: blur(24px);
+          left: 0;
+width: 380px;
+max-width: calc(100vw - 30px);
           background: linear-gradient(160deg, #0f1624 0%, #080d18 100%);
           border: 1px solid rgba(200,168,74,0.2);
           border-radius: 22px;
@@ -253,7 +256,14 @@ export default function RealtimeNotifications() {
       `}</style>
 
       {/* ── Wrapper — position relative so panel anchors here ── */}
-      <div ref={panelRef} style={{ position: "relative", display: "inline-block" }}>
+      <div
+  ref={panelRef}
+  style={{
+    position: "relative",
+    display: "inline-block",
+    marginLeft: "28px",
+  }}
+>
 
         {/* ── Bell button ── */}
         <button
