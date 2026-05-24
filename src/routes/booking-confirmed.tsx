@@ -572,9 +572,28 @@ ${bookingData.reference}
 `;
 
               await sendWhatsAppMessage(
-                bookingData.phone,
-                message
-              );
+  bookingData.phone,
+
+  {
+    name:
+      bookingData.name,
+
+    packageName:
+      plan.name,
+
+    price:
+      plan.price,
+
+    date:
+      bookingData.date,
+
+    time:
+      bookingData.time,
+
+    reference:
+      bookingData.reference,
+  }
+);
 
               setBookingConfirmed(
                 true

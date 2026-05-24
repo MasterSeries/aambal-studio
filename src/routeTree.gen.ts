@@ -14,6 +14,7 @@ import { Route as ShootManagerRouteImport } from './routes/shoot-manager'
 import { Route as ShootDetailsRouteImport } from './routes/shoot-details'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PackagesRouteImport } from './routes/packages'
+import { Route as MediaManagerRouteImport } from './routes/media-manager'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as GalleryRouteImport } from './routes/gallery'
@@ -52,6 +53,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const PackagesRoute = PackagesRouteImport.update({
   id: '/packages',
   path: '/packages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaManagerRoute = MediaManagerRouteImport.update({
+  id: '/media-manager',
+  path: '/media-manager',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/gallery': typeof GalleryRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/media-manager': typeof MediaManagerRoute
   '/packages': typeof PackagesRoute
   '/profile': typeof ProfileRoute
   '/shoot-details': typeof ShootDetailsRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/gallery': typeof GalleryRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/media-manager': typeof MediaManagerRoute
   '/packages': typeof PackagesRoute
   '/profile': typeof ProfileRoute
   '/shoot-details': typeof ShootDetailsRoute
@@ -180,6 +188,7 @@ export interface FileRoutesById {
   '/gallery': typeof GalleryRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/media-manager': typeof MediaManagerRoute
   '/packages': typeof PackagesRoute
   '/profile': typeof ProfileRoute
   '/shoot-details': typeof ShootDetailsRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/history'
     | '/login'
+    | '/media-manager'
     | '/packages'
     | '/profile'
     | '/shoot-details'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/history'
     | '/login'
+    | '/media-manager'
     | '/packages'
     | '/profile'
     | '/shoot-details'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/history'
     | '/login'
+    | '/media-manager'
     | '/packages'
     | '/profile'
     | '/shoot-details'
@@ -266,6 +278,7 @@ export interface RootRouteChildren {
   GalleryRoute: typeof GalleryRoute
   HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
+  MediaManagerRoute: typeof MediaManagerRoute
   PackagesRoute: typeof PackagesRoute
   ProfileRoute: typeof ProfileRoute
   ShootDetailsRoute: typeof ShootDetailsRoute
@@ -308,6 +321,13 @@ declare module '@tanstack/react-router' {
       path: '/packages'
       fullPath: '/packages'
       preLoaderRoute: typeof PackagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media-manager': {
+      id: '/media-manager'
+      path: '/media-manager'
+      fullPath: '/media-manager'
+      preLoaderRoute: typeof MediaManagerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -436,6 +456,7 @@ const rootRouteChildren: RootRouteChildren = {
   GalleryRoute: GalleryRoute,
   HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
+  MediaManagerRoute: MediaManagerRoute,
   PackagesRoute: PackagesRoute,
   ProfileRoute: ProfileRoute,
   ShootDetailsRoute: ShootDetailsRoute,

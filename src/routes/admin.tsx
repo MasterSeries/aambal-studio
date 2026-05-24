@@ -76,7 +76,12 @@ function GlassCard({ children, className = "", style = {} }: {
     </div>
   );
 }
-
+<a
+  href="/media-manager"
+  className="rounded-2xl bg-pink-500 px-5 py-3 font-bold text-white"
+>
+  Media Manager
+</a>
 function StatCard({ label, value, accent, icon, delay = 0 }: {
   label: string; value: any; accent?: string; icon: string; delay?: number;
 }) {

@@ -20,7 +20,23 @@ type Post = {
 
   likes: string;
 };
+function getInstagramEmbedUrl(
+  url: string
+) {
 
+  try {
+
+    const clean =
+      url.split("?")[0];
+
+    return `${clean}embed`;
+
+  } catch {
+
+    return url;
+
+  }
+}
 export function InstagramFeed() {
 
   const [active, setActive] =
@@ -142,36 +158,31 @@ export function InstagramFeed() {
               />
 
             ) : (
-
               <>
+              <div className="relative h-full w-full overflow-hidden">
 
-                <img
-                  src={
-                    p.poster ||
-                    p.src
-                  }
+  <iframe
+    src={getInstagramEmbedUrl(
+      p.src
+    )}
 
-                  alt={p.caption}
+    className="h-full w-full scale-[1.02]"
 
-                  loading="lazy"
+    allowFullScreen
 
-                  className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
-                />
+    loading="lazy"
 
-                <div className="absolute top-3 right-3 rounded-full bg-background/70 backdrop-blur p-2">
+    style={{
+      border: "none",
+    }}
+  />
 
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                  >
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none" />
 
-                </div>
+</div>
 
-              </>
+
+  </>
 
             )}
 
@@ -240,19 +251,19 @@ export function InstagramFeed() {
 
             ) : (
 
-              <video
-                src={active.src}
+             <iframe
+  src={getInstagramEmbedUrl(
+    active.src
+  )}
 
-                poster={
-                  active.poster
-                }
+  className="w-full h-[85vh] bg-black"
 
-                controls
+  allowFullScreen
 
-                autoPlay
-
-                className="w-full max-h-[70vh] bg-black"
-              />
+  style={{
+    border: "none",
+  }}
+/>
 
             )}
 

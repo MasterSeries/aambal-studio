@@ -8,7 +8,7 @@ import hero from "@/assets/hero-festival.jpg";
 import aerial from "@/assets/drone-aerial.jpg";
 import portrait from "@/assets/portrait-festival.jpg";
 import { InstagramFeed } from "@/components/InstagramFeed";
-
+import { GallerySection } from "@/components/GallerySection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -360,6 +360,26 @@ function Home() {
 
       
 <InstagramFeed />
+<Section id="gallery">
+
+  <div className="mb-14 text-center">
+
+    <p className="text-xs uppercase tracking-[0.3em] text-primary mb-4">
+      Gallery
+    </p>
+
+    <h2 className="font-display text-5xl md:text-6xl">
+      Moments we’ve{" "}
+      <span className="italic text-gradient-gold">
+        captured.
+      </span>
+    </h2>
+
+  </div>
+
+  <GallerySection />
+
+</Section>
       {/* BOOKING */}
       <Section id="book">
   <div className="grid gap-10 xl:grid-cols-[0.9fr_1.4fr] items-start">
