@@ -1,7 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "motion/react";
+import { useEffect } from "react";
+import {
+  doc,
+  onSnapshot,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 
+
+import { db } from "@/lib/firebase";
 // ── Camera shutter SVG animation ──────────────────────────────────────────────
 function CameraAnimation() {
   return (
@@ -176,7 +185,7 @@ function PremiumAnimation() {
 }
 
 // ── Package data ───────────────────────────────────────────────────────────────
-const packages = [
+const defaultPackages = [
   {
     id: "portrait" as const,
     name: "Festival Portrait",
@@ -186,6 +195,7 @@ const packages = [
     duration: "1 Hour",
     badge: null,
     color: "#c8a84a",
+    accent: "#e8c97a",
     animation: <CameraAnimation />,
     includes: ["photography"],
     items: [
@@ -207,6 +217,7 @@ const packages = [
     duration: "2 Hours",
     badge: "Most Booked",
     color: "#e8c97a",
+    accent: "#c8a84a",
     animation: <CameraAnimation />,
     includes: ["photography"],
     items: [
@@ -229,6 +240,7 @@ const packages = [
     duration: "Half Day (4–5 hrs)",
     badge: "Premium",
     color: "#f5dfa0",
+    accent: "#d4a843",
     animation: <FilmAnimation />,
     includes: ["photography", "film"],
     items: [
@@ -252,6 +264,7 @@ const packages = [
     duration: "Sunrise → Night",
     badge: "Best Value",
     color: "#d4a843",
+    accent: "#f5dfa0",
     animation: <PremiumAnimation />,
     includes: ["photography", "drone", "film"],
     items: [
@@ -269,7 +282,8 @@ const packages = [
   },
 ];
 
-type Package = typeof packages[number];
+type Package =
+  typeof defaultPackages[number];
 
 // ── Detail modal ───────────────────────────────────────────────────────────────
 function PackageModal({
@@ -436,9 +450,160 @@ function PackageModal({
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export function PackagesShowcase() {
+
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Package | null>(null);
+const [
+  packages,
+  setPackages,
+] = useState(defaultPackages);
+useEffect(() => {
 
+  const ref =
+    doc(
+      db,
+      "siteContent",
+      "packages"
+    );
+
+  async function initPackages() {
+
+    const snap =
+      await getDoc(
+        ref
+      );
+
+    // AUTO CREATE FIREBASE DOC
+    if (
+      !snap.exists()
+    ) {
+
+      const firebaseData =
+  Object.fromEntries(
+
+    defaultPackages.map(
+      (p) => [
+
+        p.id,
+
+        {
+
+          id: p.id,
+          name: p.name,
+          tagline: p.tagline,
+          price: p.price,
+          originalPrice:
+            p.originalPrice,
+          duration:
+            p.duration,
+          badge:
+            p.badge,
+          color:
+            p.color,
+          accent:
+            p.accent,
+          includes:
+            p.includes,
+          items:
+            p.items,
+          highlight:
+            p.highlight,
+          cta:
+            p.cta,
+
+        },
+
+      ]
+    )
+  );
+
+      await setDoc(
+        ref,
+        firebaseData
+      );
+    }
+  }
+
+  initPackages();
+
+  const unsub =
+    onSnapshot(
+      ref,
+
+      (snap) => {
+
+        // FALLBACK
+        if (
+          !snap.exists()
+        ) {
+
+          setPackages(
+            defaultPackages
+          );
+
+          return;
+        }
+
+        const data =
+          snap.data();
+
+        const merged =
+          defaultPackages.map(
+            (
+              defaultPkg
+            ) => {
+
+              const adminPkg =
+                data[
+                  defaultPkg.id
+                ];
+
+              if (
+                !adminPkg
+              ) {
+
+                return defaultPkg;
+              }
+
+              return {
+
+                ...defaultPkg,
+
+                ...(adminPkg || {}),
+
+                // SAFE FALLBACKS
+                includes:
+                  adminPkg.includes ||
+                  defaultPkg.includes,
+
+                items:
+                  adminPkg.items ||
+                  defaultPkg.items,
+
+                color:
+                  adminPkg.color ||
+                  defaultPkg.color,
+
+                accent:
+                  adminPkg.accent ||
+                  defaultPkg.accent,
+
+                animation:
+  defaultPkg.animation || null,
+              };
+            }
+          );
+
+        setPackages(
+          merged
+        );
+      }
+    );
+
+  return () =>
+    unsub();
+
+}, []);
   /** Close modal + navigate to the cinematic booking-confirmed page */
   function handleBook(pkg: Package) {
     setSelected(null);

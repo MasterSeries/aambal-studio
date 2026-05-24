@@ -82,6 +82,8 @@ function GlassCard({ children, className = "", style = {} }: {
 >
   Media Manager
 </a>
+
+
 function StatCard({ label, value, accent, icon, delay = 0 }: {
   label: string; value: any; accent?: string; icon: string; delay?: number;
 }) {
@@ -275,9 +277,81 @@ function AdminPage() {
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
               {[
-                { label: "Analytics PDF", icon: "⬇", onClick: downloadAnalyticsPDF, color: T.gold },
-                { label: "Manage Shoots", icon: "🎬", to: "/shoot-manager", color: "#a78bfa" },
-                { label: "Shoot Details", icon: "📋", to: "/shoot-details", color: T.cyan },
+  {
+    label: "Analytics PDF",
+
+    icon: "⬇",
+
+    onClick:
+      downloadAnalyticsPDF,
+
+    color: T.gold,
+  },
+
+  {
+    label:
+      "Manage Shoots",
+
+    icon: "🎬",
+
+    to:
+      "/shoot-manager",
+
+    color:
+      "#a78bfa",
+  },
+
+  {
+    label:
+      "Shoot Details",
+
+    icon: "📋",
+
+    to:
+      "/shoot-details",
+
+    color:
+      T.cyan,
+  },
+
+  {
+    label:
+      "Media Manager",
+
+    icon: "🖼",
+
+    to:
+      "/media-manager",
+
+    color:
+      "#ec4899",
+  },
+
+  {
+    label:
+      "Homestay CMS",
+
+    icon: "🏡",
+
+    to:
+      "/homestay-editor",
+
+    color:
+      "#22c55e",
+  },
+  {
+  label:
+    "Package CMS",
+
+  icon: "💎",
+
+  to:
+    "/package-editor",
+
+  color:
+    "#f59e0b",
+},
+
               ].map((btn) =>
                 btn.to ? (
                   <Link key={btn.label} to={btn.to}>

@@ -14,8 +14,11 @@ import { Route as ShootManagerRouteImport } from './routes/shoot-manager'
 import { Route as ShootDetailsRouteImport } from './routes/shoot-details'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PackagesRouteImport } from './routes/packages'
+import { Route as PackageEditorRouteImport } from './routes/package-editor'
 import { Route as MediaManagerRouteImport } from './routes/media-manager'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as HomestayEditorRouteImport } from './routes/homestay-editor'
+import { Route as HomestayRouteImport } from './routes/homestay'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as CustomerSignupRouteImport } from './routes/customer-signup'
@@ -55,6 +58,11 @@ const PackagesRoute = PackagesRouteImport.update({
   path: '/packages',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PackageEditorRoute = PackageEditorRouteImport.update({
+  id: '/package-editor',
+  path: '/package-editor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MediaManagerRoute = MediaManagerRouteImport.update({
   id: '/media-manager',
   path: '/media-manager',
@@ -63,6 +71,16 @@ const MediaManagerRoute = MediaManagerRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomestayEditorRoute = HomestayEditorRouteImport.update({
+  id: '/homestay-editor',
+  path: '/homestay-editor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomestayRoute = HomestayRouteImport.update({
+  id: '/homestay',
+  path: '/homestay',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -143,8 +161,11 @@ export interface FileRoutesByFullPath {
   '/customer-signup': typeof CustomerSignupRoute
   '/gallery': typeof GalleryRoute
   '/history': typeof HistoryRoute
+  '/homestay': typeof HomestayRoute
+  '/homestay-editor': typeof HomestayEditorRoute
   '/login': typeof LoginRoute
   '/media-manager': typeof MediaManagerRoute
+  '/package-editor': typeof PackageEditorRoute
   '/packages': typeof PackagesRoute
   '/profile': typeof ProfileRoute
   '/shoot-details': typeof ShootDetailsRoute
@@ -164,8 +185,11 @@ export interface FileRoutesByTo {
   '/customer-signup': typeof CustomerSignupRoute
   '/gallery': typeof GalleryRoute
   '/history': typeof HistoryRoute
+  '/homestay': typeof HomestayRoute
+  '/homestay-editor': typeof HomestayEditorRoute
   '/login': typeof LoginRoute
   '/media-manager': typeof MediaManagerRoute
+  '/package-editor': typeof PackageEditorRoute
   '/packages': typeof PackagesRoute
   '/profile': typeof ProfileRoute
   '/shoot-details': typeof ShootDetailsRoute
@@ -187,8 +211,11 @@ export interface FileRoutesById {
   '/customer-signup': typeof CustomerSignupRoute
   '/gallery': typeof GalleryRoute
   '/history': typeof HistoryRoute
+  '/homestay': typeof HomestayRoute
+  '/homestay-editor': typeof HomestayEditorRoute
   '/login': typeof LoginRoute
   '/media-manager': typeof MediaManagerRoute
+  '/package-editor': typeof PackageEditorRoute
   '/packages': typeof PackagesRoute
   '/profile': typeof ProfileRoute
   '/shoot-details': typeof ShootDetailsRoute
@@ -211,8 +238,11 @@ export interface FileRouteTypes {
     | '/customer-signup'
     | '/gallery'
     | '/history'
+    | '/homestay'
+    | '/homestay-editor'
     | '/login'
     | '/media-manager'
+    | '/package-editor'
     | '/packages'
     | '/profile'
     | '/shoot-details'
@@ -232,8 +262,11 @@ export interface FileRouteTypes {
     | '/customer-signup'
     | '/gallery'
     | '/history'
+    | '/homestay'
+    | '/homestay-editor'
     | '/login'
     | '/media-manager'
+    | '/package-editor'
     | '/packages'
     | '/profile'
     | '/shoot-details'
@@ -254,8 +287,11 @@ export interface FileRouteTypes {
     | '/customer-signup'
     | '/gallery'
     | '/history'
+    | '/homestay'
+    | '/homestay-editor'
     | '/login'
     | '/media-manager'
+    | '/package-editor'
     | '/packages'
     | '/profile'
     | '/shoot-details'
@@ -277,8 +313,11 @@ export interface RootRouteChildren {
   CustomerSignupRoute: typeof CustomerSignupRoute
   GalleryRoute: typeof GalleryRoute
   HistoryRoute: typeof HistoryRoute
+  HomestayRoute: typeof HomestayRoute
+  HomestayEditorRoute: typeof HomestayEditorRoute
   LoginRoute: typeof LoginRoute
   MediaManagerRoute: typeof MediaManagerRoute
+  PackageEditorRoute: typeof PackageEditorRoute
   PackagesRoute: typeof PackagesRoute
   ProfileRoute: typeof ProfileRoute
   ShootDetailsRoute: typeof ShootDetailsRoute
@@ -323,6 +362,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PackagesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/package-editor': {
+      id: '/package-editor'
+      path: '/package-editor'
+      fullPath: '/package-editor'
+      preLoaderRoute: typeof PackageEditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/media-manager': {
       id: '/media-manager'
       path: '/media-manager'
@@ -335,6 +381,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/homestay-editor': {
+      id: '/homestay-editor'
+      path: '/homestay-editor'
+      fullPath: '/homestay-editor'
+      preLoaderRoute: typeof HomestayEditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/homestay': {
+      id: '/homestay'
+      path: '/homestay'
+      fullPath: '/homestay'
+      preLoaderRoute: typeof HomestayRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -455,8 +515,11 @@ const rootRouteChildren: RootRouteChildren = {
   CustomerSignupRoute: CustomerSignupRoute,
   GalleryRoute: GalleryRoute,
   HistoryRoute: HistoryRoute,
+  HomestayRoute: HomestayRoute,
+  HomestayEditorRoute: HomestayEditorRoute,
   LoginRoute: LoginRoute,
   MediaManagerRoute: MediaManagerRoute,
+  PackageEditorRoute: PackageEditorRoute,
   PackagesRoute: PackagesRoute,
   ProfileRoute: ProfileRoute,
   ShootDetailsRoute: ShootDetailsRoute,
