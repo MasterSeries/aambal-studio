@@ -358,34 +358,7 @@ function Home() {
         </div>
       </Section>
 
-      {/* GALLERY */}
-      <Section id="gallery">
-        <p className="text-xs uppercase tracking-[0.3em] text-primary mb-4">Recent work</p>
-        <h2 className="font-display text-5xl md:text-6xl mb-16 max-w-2xl">
-          Quiet moments, <span className="italic text-gradient-gold">loud festival.</span>
-        </h2>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-          {[hero, portrait, aerial, hero, aerial, portrait, hero, aerial].map((src, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.5, delay: (i % 4) * 0.06 }}
-              className={`overflow-hidden rounded-2xl border border-border ${
-                i % 5 === 0 ? "row-span-2 aspect-[3/4]" : "aspect-square"
-              }`}
-            >
-              <img
-                src={src}
-                alt="Festival photography sample"
-                loading="lazy"
-                className="h-full w-full object-cover transition duration-700 hover:scale-110"
-              />
-            </motion.div>
-          ))}
-        </div>
-      </Section>
+      
 <InstagramFeed />
       {/* BOOKING */}
       <Section id="book">
