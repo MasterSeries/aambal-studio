@@ -1,658 +1,318 @@
 import { createFileRoute } from "@tanstack/react-router";
-
 import { useEffect, useState } from "react";
+import { auth, db, storage } from "@/lib/firebase";
+import { onAuthStateChanged, updateProfile } from "firebase/auth";
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { motion } from "motion/react";
 
-import {
-  auth,
-  db,
-  storage,
-} from "@/lib/firebase";
+export const Route = createFileRoute("/customer-profile")({
+  component: CustomerProfile,
+});
 
-import {
-  onAuthStateChanged,
-  updateProfile,
-} from "firebase/auth";
+const G = {
+  green: "#4a9460", greenLight: "#6db87a", greenPale: "#a8e6b0",
+  gold: "#c8a84a", goldLight: "#e8c97a",
+  ink: "#040d08", ink2: "#071009", ink3: "#0d1f10",
+  text: "#f0ede6", muted: "rgba(240,237,230,0.45)",
+  border: "rgba(109,184,122,0.15)", error: "#e87a6a",
+};
 
-import {
-  doc,
-  getDoc,
-  setDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+const PACKAGES = ["Festival Portrait", "Family & Group", "Bridal / Couple", "Full Day Coverage"];
 
-import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-} from "firebase/storage";
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontSize: "0.58rem", letterSpacing: "0.38em", textTransform: "uppercase", color: G.greenLight, opacity: 0.8, marginBottom: 6 }}>
+      ✦ {children} ✦
+    </p>
+  );
+}
 
-export const Route =
-  createFileRoute(
-    "/customer-profile"
-  )({
-    component: CustomerProfile,
-  });
+function StatCard({ label, value, accent = G.greenPale }: { label: string; value: any; accent?: string }) {
+  return (
+    <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+      style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${G.border}`, borderRadius: 18, padding: "1.2rem 1.4rem" }}>
+      <p style={{ fontSize: 9, letterSpacing: "0.22em", textTransform: "uppercase", color: G.muted, marginBottom: 10 }}>{label}</p>
+      <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "2.6rem", fontWeight: 300, color: accent, lineHeight: 1, wordBreak: "break-word" }}>{value}</p>
+    </motion.div>
+  );
+}
 
-function CustomerProfile() {
-  const [loading, setLoading] =
-    useState(true);
+function InputField({ label, value, onChange, disabled = false, type = "text", multiline = false }: { label: string; value: string; onChange?: (v: string) => void; disabled?: boolean; type?: string; multiline?: boolean }) {
+  const baseStyle: React.CSSProperties = {
+    width: "100%", background: disabled ? "rgba(255,255,255,0.015)" : "rgba(255,255,255,0.03)",
+    border: `1px solid ${G.border}`, borderRadius: 14, padding: "12px 14px",
+    color: disabled ? G.muted : G.text, fontSize: "0.88rem",
+    fontFamily: "'Raleway',sans-serif", opacity: disabled ? 0.6 : 1,
+  };
+  return (
+    <div>
+      <p style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: G.greenPale, opacity: 0.7, marginBottom: 6 }}>{label}</p>
+      {multiline ? (
+        <textarea rows={4} value={value} onChange={(e) => onChange?.(e.target.value)}
+          style={{ ...baseStyle, resize: "vertical" }} />
+      ) : (
+        <input type={type} value={value} disabled={disabled} onChange={(e) => onChange?.(e.target.value)} style={baseStyle} />
+      )}
+    </div>
+  );
+}
 
-  const [saving, setSaving] =
-    useState(false);
+function CompletionItem({ label, done }: { label: string; done: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: done ? G.greenPale : G.muted, padding: "6px 0", borderBottom: `1px solid ${G.border}` }}>
+      <span style={{ width: 18, height: 18, borderRadius: "50%", background: done ? `${G.green}25` : "transparent", border: `1px solid ${done ? G.green : G.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: done ? G.greenLight : G.muted, flexShrink: 0 }}>
+        {done ? "✓" : "·"}
+      </span>
+      {label}
+    </div>
+  );
+}
 
-  const [uid, setUid] =
-    useState("");
-
-  const [name, setName] =
-    useState("");
-
-  const [email, setEmail] =
-    useState("");
-
-  const [phone, setPhone] =
-    useState("");
-
-  const [address, setAddress] =
-    useState("");
-
-  const [
-    favoritePackage,
-    setFavoritePackage,
-  ] = useState("");
-
-  const [photoURL, setPhotoURL] =
-    useState("");
-
-  const [totalBookings,
-    setTotalBookings] =
-    useState(0);
-
-  const [completedBookings,
-    setCompletedBookings] =
-    useState(0);
-
-  const [galleryCount,
-    setGalleryCount] =
-    useState(0);
+export default function CustomerProfile() {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [uid, setUid] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [favoritePackage, setFavoritePackage] = useState("");
+  const [photoURL, setPhotoURL] = useState("");
+  const [totalBookings, setTotalBookings] = useState(0);
+  const [completedBookings, setCompletedBookings] = useState(0);
+  const [galleryCount, setGalleryCount] = useState(0);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const unsubscribe =
-      onAuthStateChanged(
-        auth,
-        async (user) => {
-          if (!user) {
-            window.location.href =
-              "/customer-login";
-
-            return;
-          }
-
-          setUid(user.uid);
-
-          setName(
-            user.displayName || ""
-          );
-
-          setEmail(
-            user.email || ""
-          );
-
-          setPhotoURL(
-            user.photoURL || ""
-          );
-
-          try {
-            // PROFILE
-            const docRef = doc(
-              db,
-              "users",
-              user.uid
-            );
-
-            const docSnap =
-              await getDoc(docRef);
-
-            if (docSnap.exists()) {
-              const data =
-                docSnap.data();
-
-              setPhone(
-                data.phone || ""
-              );
-
-              setAddress(
-                data.address || ""
-              );
-
-              setFavoritePackage(
-                data.favoritePackage ||
-                  ""
-              );
-
-              setPhotoURL(
-                data.photoURL ||
-                  ""
-              );
-            } else {
-              await setDoc(
-                doc(
-                  db,
-                  "users",
-                  user.uid
-                ),
-                {
-                  name:
-                    user.displayName ||
-                    "",
-
-                  email:
-                    user.email || "",
-
-                  phone: "",
-
-                  address: "",
-
-                  favoritePackage:
-                    "",
-
-                  photoURL:
-                    user.photoURL ||
-                    "",
-
-                  createdAt:
-                    new Date(),
-                }
-              );
-            }
-
-            // BOOKINGS
-            const bookingQuery =
-              query(
-                collection(
-                  db,
-                  "bookings"
-                ),
-
-                where(
-                  "email",
-                  "==",
-                  user.email
-                )
-              );
-
-            const bookingSnap =
-              await getDocs(
-                bookingQuery
-              );
-
-            setTotalBookings(
-              bookingSnap.size
-            );
-
-            let completed = 0;
-
-            bookingSnap.forEach(
-              (doc) => {
-                if (
-                  doc.data()
-                    .status ===
-                  "completed"
-                ) {
-                  completed++;
-                }
-              }
-            );
-
-            setCompletedBookings(
-              completed
-            );
-
-            // FAKE GALLERY COUNT
-            setGalleryCount(
-              Math.floor(
-                Math.random() * 120
-              ) + 20
-            );
-          } catch (err) {
-            console.error(err);
-
-            alert(
-              "Failed to load profile"
-            );
-          } finally {
-            setLoading(false);
-          }
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = "/customer-login"; return; }
+      setUid(user.uid);
+      setName(user.displayName || "");
+      setEmail(user.email || "");
+      setPhotoURL(user.photoURL || "");
+      try {
+        const docSnap = await getDoc(doc(db, "users", user.uid));
+        if (docSnap.exists()) {
+          const d = docSnap.data();
+          setPhone(d.phone || ""); setAddress(d.address || "");
+          setFavoritePackage(d.favoritePackage || ""); setPhotoURL(d.photoURL || user.photoURL || "");
+        } else {
+          await setDoc(doc(db, "users", user.uid), { name: user.displayName || "", email: user.email || "", phone: "", address: "", favoritePackage: "", photoURL: user.photoURL || "", createdAt: new Date() });
         }
-      );
-
-    return () => unsubscribe();
+        const bookingSnap = await getDocs(query(collection(db, "bookings"), where("email", "==", user.email)));
+        setTotalBookings(bookingSnap.size);
+        let c = 0; bookingSnap.forEach((d) => { if (d.data().status === "completed") c++; });
+        setCompletedBookings(c);
+        setGalleryCount(Math.floor(Math.random() * 120) + 20);
+      } catch (err) { console.error(err); } finally { setLoading(false); }
+    });
+    return () => unsub();
   }, []);
 
-  async function handleImageUpload(
-    e: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const file =
-      e.target.files?.[0];
-
-    if (!file) return;
-
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]; if (!file) return;
     try {
-      const storageRef = ref(
-        storage,
-        `profiles/${uid}`
-      );
-
-      await uploadBytes(
-        storageRef,
-        file
-      );
-
-      const url =
-        await getDownloadURL(
-          storageRef
-        );
-
+      const storageRef = ref(storage, `profiles/${uid}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
       setPhotoURL(url);
-
-      if (auth.currentUser) {
-        await updateProfile(
-          auth.currentUser,
-          {
-            photoURL: url,
-          }
-        );
-      }
-    } catch (err) {
-      console.error(err);
-
-      alert(
-        "Image upload failed"
-      );
-    }
+      if (auth.currentUser) await updateProfile(auth.currentUser, { photoURL: url });
+    } catch (err) { console.error(err); }
   }
 
   async function saveProfile() {
+    setSaving(true);
     try {
-      setSaving(true);
-
-      await setDoc(
-        doc(db, "users", uid),
-        {
-          name,
-          email,
-          phone,
-          address,
-          favoritePackage,
-          photoURL,
-
-          updatedAt:
-            new Date(),
-        },
-        { merge: true }
-      );
-
-      alert(
-        "Profile updated"
-      );
-    } catch (err) {
-      console.error(err);
-
-      alert(
-        "Save failed"
-      );
-    } finally {
-      setSaving(false);
-    }
+      await setDoc(doc(db, "users", uid), { name, email, phone, address, favoritePackage, photoURL, updatedAt: new Date() }, { merge: true });
+      setSaved(true); setTimeout(() => setSaved(false), 2500);
+    } catch (err) { console.error(err); } finally { setSaving(false); }
   }
+
+  const completionScore = [!!name, !!phone, !!address, !!favoritePackage, !!photoURL].filter(Boolean).length;
+  const completionPct = Math.round((completionScore / 5) * 100);
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#07070b] text-3xl font-bold text-white">
-        Loading Profile...
+      <div style={{ minHeight: "100vh", background: G.ink, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 48, animation: "floatLotus 3s ease-in-out infinite" }}>🪷</div>
+          <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.4rem", color: G.greenPale, marginTop: 16 }}>Loading profile…</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#07070b] px-4 py-8 text-white md:px-8">
-      
-      <div className="mx-auto max-w-7xl">
-        
-        {/* HERO */}
-        <div className="relative overflow-hidden rounded-[40px] border border-white/10 bg-gradient-to-br from-pink-500/10 to-white/[0.03] p-8 md:p-12">
-          
-          <div className="absolute right-[-100px] top-[-100px] h-80 w-80 rounded-full bg-pink-500/10 blur-3xl" />
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500;600&family=Cinzel:wght@400;500&display=swap');
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        body,#root{background:${G.ink};color:${G.text};font-family:'Raleway',sans-serif}
+        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:${G.green}50;border-radius:3px}
+        @keyframes floatLotus{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+        @keyframes ambientPulse{0%,100%{opacity:.3}50%{opacity:.55}}
+        @keyframes shimmerGold{0%{background-position:200% 0}100%{background-position:-200% 0}}
+        input:focus,select:focus,textarea:focus{outline:none;border-color:${G.green}!important;background:rgba(74,148,96,0.05)!important}
+        input::placeholder,textarea::placeholder{color:rgba(240,237,230,0.18)}
+        select option{background:${G.ink2};color:${G.text}}
+      `}</style>
 
-          <div className="relative flex flex-col gap-10 lg:flex-row lg:items-center">
-            
-            {/* PROFILE IMAGE */}
-            <div className="relative">
-              
-              <img
-                src={
-                  photoURL ||
-                  "https://ui-avatars.com/api/?name=User"
-                }
-                className="h-44 w-44 rounded-full border-4 border-pink-500/20 object-cover shadow-2xl"
-              />
+      <div style={{ minHeight: "100vh", background: G.ink, position: "relative", overflow: "hidden" }}>
+        {/* ambient glows */}
+        <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
+          <div style={{ position: "absolute", top: 0, left: "20%", width: 600, height: 400, borderRadius: "50%", background: `radial-gradient(circle,${G.green}06,transparent 65%)`, animation: "ambientPulse 7s ease-in-out infinite" }} />
+          <div style={{ position: "absolute", bottom: "10%", right: "5%", width: 400, height: 350, borderRadius: "50%", background: `radial-gradient(circle,${G.gold}04,transparent 70%)`, animation: "ambientPulse 9s ease-in-out infinite 2s" }} />
+          <div style={{ position: "absolute", inset: 0, backgroundImage: `repeating-linear-gradient(0deg,transparent,transparent 79px,${G.green}03 80px),repeating-linear-gradient(90deg,transparent,transparent 79px,${G.green}03 80px)` }} />
+        </div>
 
-              <label className="absolute bottom-3 right-3 cursor-pointer rounded-full bg-pink-500 px-5 py-2 text-sm font-bold shadow-lg">
-                Edit
+        <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "2.5rem 1.5rem 5rem" }}>
 
-                <input
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={
-                    handleImageUpload
-                  }
-                />
-              </label>
-            </div>
+          {/* HERO BANNER */}
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
+            style={{ background: `linear-gradient(135deg,${G.green}10,${G.gold}05,rgba(7,16,9,0.9))`, border: `1px solid ${G.border}`, borderRadius: 28, padding: "2.5rem", marginBottom: "2rem", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, right: 0, width: 300, height: 280, background: `radial-gradient(circle at top right,${G.green}10,transparent 70%)`, pointerEvents: "none" }} />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 28, alignItems: "center" }}>
+              {/* Avatar */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <div style={{ width: 110, height: 110, borderRadius: "50%", border: `2px solid ${G.green}35`, overflow: "hidden", background: `${G.green}15` }}>
+                  {photoURL ? (
+                    <img src={photoURL} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cinzel',serif", fontSize: "2rem", color: G.greenPale }}>
+                      {name?.charAt(0)?.toUpperCase() || "?"}
+                    </div>
+                  )}
+                </div>
+                <label style={{ position: "absolute", bottom: 4, right: 4, width: 28, height: 28, borderRadius: "50%", background: `linear-gradient(135deg,${G.green},${G.greenLight})`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 12, boxShadow: `0 4px 12px ${G.green}40` }}>
+                  ✎
+                  <input type="file" accept="image/*" hidden onChange={handleImageUpload} />
+                </label>
+              </div>
 
-            {/* INFO */}
-            <div className="flex-1">
-              
-              <h1 className="text-5xl font-black tracking-tight">
-                {name || "Customer"}
-              </h1>
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SectionLabel>Customer Profile</SectionLabel>
+                <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "clamp(2rem,5vw,3.2rem)", fontWeight: 300, color: G.text, lineHeight: 1.05 }}>
+                  {name || <em style={{ fontStyle: "italic", color: G.muted }}>Add your name</em>}
+                </h1>
+                <p style={{ color: G.muted, fontSize: "0.82rem", marginTop: 6 }}>{email}</p>
 
-              <p className="mt-4 text-lg text-white/60">
-                {email}
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-4">
-                
-                <a
-                  href="/customer-dashboard"
-                  className="rounded-2xl bg-pink-500 px-6 py-4 font-bold transition hover:bg-pink-400"
-                >
-                  My Bookings
-                </a>
-
-                <a
-                  href="/customer-gallery"
-                  className="rounded-2xl border border-white/10 bg-white/[0.05] px-6 py-4 font-semibold"
-                >
-                  Gallery
-                </a>
-
-                <a
-                  href="/"
-                  className="rounded-2xl border border-white/10 bg-white/[0.05] px-6 py-4 font-semibold"
-                >
-                  Home
-                </a>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 }}>
+                  {[
+                    { label: "My Bookings", href: "/customer-dashboard", accent: G.green },
+                    { label: "Gallery", href: "/customer-gallery", accent: undefined },
+                    { label: "History", href: "/customer-history", accent: undefined },
+                    { label: "Home", href: "/", accent: undefined },
+                  ].map(({ label, href, accent }) => (
+                    <a key={href} href={href} style={{
+                      background: accent ? `${accent}18` : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${accent ? accent + "35" : G.border}`,
+                      color: accent ? G.greenPale : G.muted, borderRadius: 100,
+                      padding: "8px 16px", textDecoration: "none", fontSize: "0.8rem", letterSpacing: "0.06em", fontWeight: 500,
+                    }}>{label}</a>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
 
-        {/* STATS */}
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          
-          <StatsCard
-            title="Total Bookings"
-            value={totalBookings}
-          />
-
-          <StatsCard
-            title="Completed"
-            value={completedBookings}
-          />
-
-          <StatsCard
-            title="Gallery Photos"
-            value={galleryCount}
-          />
-
-          <StatsCard
-            title="Favorite Package"
-            value={
-              favoritePackage ||
-              "None"
-            }
-          />
-        </div>
-
-        {/* CONTENT */}
-        <div className="mt-10 grid gap-8 xl:grid-cols-[1fr_0.8fr]">
-          
-          {/* LEFT */}
-          <div className="rounded-[36px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-2xl">
-            
-            <h2 className="mb-8 text-4xl font-black">
-              Personal Details
-            </h2>
-
-            <div className="grid gap-5 md:grid-cols-2">
-              
-              <InputField
-                placeholder="Full Name"
-                value={name}
-                onChange={setName}
-              />
-
-              <InputField
-                placeholder="Phone Number"
-                value={phone}
-                onChange={setPhone}
-              />
-            </div>
-
-            <div className="mt-5">
-              
-              <input
-                type="email"
-                disabled
-                value={email}
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-5 py-4 opacity-60"
-              />
-            </div>
-
-            <div className="mt-5">
-              
-              <textarea
-                rows={5}
-                placeholder="Address"
-                value={address}
-                onChange={(e) =>
-                  setAddress(
-                    e.target.value
-                  )
-                }
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-5 py-4"
-              />
-            </div>
-
-            <div className="mt-5">
-              
-              <select
-                value={
-                  favoritePackage
-                }
-                onChange={(e) =>
-                  setFavoritePackage(
-                    e.target.value
-                  )
-                }
-                className="w-full rounded-2xl border border-white/10 bg-black/20 px-5 py-4"
-              >
-                <option value="">
-                  Favorite Package
-                </option>
-
-                <option>
-                  Festival Portrait
-                </option>
-
-                <option>
-                  Family & Group
-                </option>
-
-                <option>
-                  Bridal / Couple
-                </option>
-
-                <option>
-                  Full Day Coverage
-                </option>
-              </select>
-            </div>
-
-            <button
-              onClick={saveProfile}
-              disabled={saving}
-              className="mt-8 w-full rounded-2xl bg-gradient-to-r from-pink-500 to-pink-400 px-6 py-5 text-lg font-black shadow-xl shadow-pink-500/20"
-            >
-              {saving
-                ? "Saving..."
-                : "Save Profile"}
-            </button>
+          {/* STATS */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: "2rem" }}>
+            <StatCard label="Total bookings" value={totalBookings} />
+            <StatCard label="Completed" value={completedBookings} accent={G.greenLight} />
+            <StatCard label="Gallery photos" value={galleryCount} accent="#7ab8e8" />
+            <StatCard label="Favorite package" value={favoritePackage || "—"} accent={G.gold} />
           </div>
 
-          {/* RIGHT */}
-          <div className="space-y-8">
-            
-            {/* PROFILE COMPLETION */}
-            <div className="rounded-[36px] border border-white/10 bg-white/[0.03] p-8">
-              
-              <h2 className="text-3xl font-black">
-                Profile Completion
+          {/* MAIN GRID */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 16 }}>
+
+            {/* PERSONAL DETAILS */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              style={{ background: "rgba(7,16,9,0.8)", border: `1px solid ${G.border}`, borderRadius: 24, padding: "2rem", backdropFilter: "blur(14px)" }}>
+              <SectionLabel>Personal Details</SectionLabel>
+              <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.8rem", fontWeight: 300, color: G.text, marginBottom: 24 }}>
+                Your <em style={{ fontStyle: "italic", color: G.greenPale }}>information</em>
               </h2>
 
-              <div className="mt-8">
-                
-                <div className="mb-3 flex justify-between text-sm text-white/50">
-                  
-                  <span>
-                    Completed
-                  </span>
-
-                  <span>
-                    90%
-                  </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <InputField label="Full name" value={name} onChange={setName} />
+                  <InputField label="Phone" value={phone} onChange={setPhone} />
+                </div>
+                <InputField label="Email" value={email} disabled />
+                <InputField label="Address" value={address} onChange={setAddress} multiline />
+                <div>
+                  <p style={{ fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase", color: G.greenPale, opacity: 0.7, marginBottom: 6 }}>Favorite Package</p>
+                  <select value={favoritePackage} onChange={(e) => setFavoritePackage(e.target.value)}
+                    style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: `1px solid ${G.border}`, borderRadius: 14, padding: "12px 14px", color: favoritePackage ? G.text : G.muted, fontSize: "0.88rem", fontFamily: "'Raleway',sans-serif", appearance: "none" }}>
+                    <option value="">Select a package…</option>
+                    {PACKAGES.map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
                 </div>
 
-                <div className="h-4 overflow-hidden rounded-full bg-white/10">
-                  
-                  <div className="h-full w-[90%] rounded-full bg-gradient-to-r from-pink-500 to-pink-300" />
-                </div>
+                <button onClick={saveProfile} disabled={saving}
+                  style={{ background: `linear-gradient(135deg,${G.green},${G.greenLight})`, border: "none", borderRadius: 100, padding: "13px", color: "#fff", fontWeight: 700, fontSize: "0.9rem", letterSpacing: "0.07em", cursor: "pointer", fontFamily: "'Raleway',sans-serif", boxShadow: `0 6px 24px ${G.green}35`, transition: "all .2s", marginTop: 4 }}>
+                  {saving ? "Saving…" : saved ? "✓ Saved!" : "Save Profile"}
+                </button>
               </div>
+            </motion.div>
 
-              <div className="mt-8 space-y-4 text-sm text-white/60">
-                
-                <div>
-                  ✓ Personal information
+            {/* RIGHT COLUMN */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+              {/* COMPLETION */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+                style={{ background: "rgba(7,16,9,0.8)", border: `1px solid ${G.border}`, borderRadius: 24, padding: "1.75rem", backdropFilter: "blur(14px)" }}>
+                <SectionLabel>Profile health</SectionLabel>
+                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.5rem", fontWeight: 300, color: G.text, marginBottom: 18 }}>
+                  Completion
+                </h2>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 12 }}>
+                  <span style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "3rem", fontWeight: 300, color: completionPct === 100 ? G.greenLight : G.gold, lineHeight: 1 }}>{completionPct}</span>
+                  <span style={{ color: G.muted, fontSize: 14 }}>%</span>
                 </div>
-
-                <div>
-                  ✓ Profile image
+                <div style={{ height: 4, background: G.border, borderRadius: 4, overflow: "hidden", marginBottom: 18 }}>
+                  <div style={{ height: "100%", width: `${completionPct}%`, background: `linear-gradient(90deg,${G.green},${G.greenLight})`, borderRadius: 4, transition: "width 0.6s ease" }} />
                 </div>
-
-                <div>
-                  ✓ Saved address
+                <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                  <CompletionItem label="Full name" done={!!name} />
+                  <CompletionItem label="Profile photo" done={!!photoURL} />
+                  <CompletionItem label="Phone number" done={!!phone} />
+                  <CompletionItem label="Address" done={!!address} />
+                  <CompletionItem label="Favorite package" done={!!favoritePackage} />
                 </div>
+              </motion.div>
 
-                <div>
-                  ✓ Favorite package
+              {/* QUICK ACCESS */}
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+                style={{ background: "rgba(7,16,9,0.8)", border: `1px solid ${G.border}`, borderRadius: 24, padding: "1.75rem", backdropFilter: "blur(14px)" }}>
+                <SectionLabel>Navigate</SectionLabel>
+                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.5rem", fontWeight: 300, color: G.text, marginBottom: 16 }}>
+                  Quick access
+                </h2>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    { label: "My Bookings", href: "/customer-dashboard", icon: "📋" },
+                    { label: "Booking History", href: "/customer-history", icon: "🕒" },
+                    { label: "Photo Gallery", href: "/customer-gallery", icon: "📸" },
+                    { label: "Book New Event", href: "/#book", icon: "🪷" },
+                  ].map(({ label, href, icon }) => (
+                    <a key={href} href={href}
+                      style={{ display: "flex", alignItems: "center", gap: 12, background: "rgba(255,255,255,0.02)", border: `1px solid ${G.border}`, borderRadius: 14, padding: "12px 16px", textDecoration: "none", color: G.text, fontSize: "0.88rem", fontWeight: 500, transition: "border-color .2s, background .2s" }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = `${G.green}40`; (e.currentTarget as HTMLElement).style.background = `${G.green}06`; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = G.border; (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.02)"; }}>
+                      <span style={{ fontSize: 18 }}>{icon}</span>
+                      {label}
+                    </a>
+                  ))}
                 </div>
-              </div>
-            </div>
-
-            {/* QUICK ACCESS */}
-            <div className="rounded-[36px] border border-white/10 bg-white/[0.03] p-8">
-              
-              <h2 className="text-3xl font-black">
-                Quick Access
-              </h2>
-
-              <div className="mt-8 grid gap-4">
-                
-                <QuickButton
-                  title="My Bookings"
-                  link="/customer-dashboard"
-                />
-
-                <QuickButton
-                  title="Photo Gallery"
-                  link="/customer-gallery"
-                />
-
-                <QuickButton
-                  title="Book New Event"
-                  link="/#book"
-                />
-              </div>
+              </motion.div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StatsCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: any;
-}) {
-  return (
-    <div className="rounded-[30px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur-2xl">
-      
-      <div className="text-sm uppercase tracking-wider text-white/50">
-        {title}
-      </div>
-
-      <div className="mt-5 text-4xl font-black break-words">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function InputField({
-  placeholder,
-  value,
-  onChange,
-}: {
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <input
-      type="text"
-      placeholder={placeholder}
-      value={value}
-      onChange={(e) =>
-        onChange(
-          e.target.value
-        )
-      }
-      className="w-full rounded-2xl border border-white/10 bg-black/20 px-5 py-4"
-    />
-  );
-}
-
-function QuickButton({
-  title,
-  link,
-}: {
-  title: string;
-  link: string;
-}) {
-  return (
-    <a
-      href={link}
-      className="rounded-2xl border border-white/10 bg-black/20 px-6 py-5 text-lg font-semibold transition hover:border-pink-500 hover:bg-pink-500/10"
-    >
-      {title}
-    </a>
+    </>
   );
 }
