@@ -1,0 +1,610 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); background: var(--color-background-tertiary); }
+
+.admin-shell { display: flex; height: 100vh; min-height: 700px; overflow: hidden; }
+
+.sidebar { width: 280px; min-width: 280px; background: var(--color-background-primary); border-right: 0.5px solid var(--color-border-tertiary); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-header { padding: 14px 16px; border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; gap: 8px; }
+.sidebar-header .back { font-size: 12px; color: var(--color-text-secondary); cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.sidebar-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.sidebar-subtitle { font-size: 11px; color: var(--color-text-secondary); margin-top: 1px; }
+
+.sections-list { flex: 1; overflow-y: auto; padding: 8px; }
+.section-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--border-radius-md); cursor: pointer; border: 0.5px solid transparent; margin-bottom: 2px; transition: background 0.15s; }
+.section-item:hover { background: var(--color-background-secondary); }
+.section-item.active { background: var(--color-background-info); border-color: var(--color-border-info); }
+.section-item.active .sec-label { color: var(--color-text-info); }
+.section-item .drag-handle { color: var(--color-text-secondary); font-size: 14px; cursor: grab; }
+.section-item .sec-icon { font-size: 14px; color: var(--color-text-secondary); width: 18px; }
+.section-item.active .sec-icon { color: var(--color-text-info); }
+.sec-label { font-size: 12px; font-weight: 500; color: var(--color-text-primary); flex: 1; }
+.sec-eye { font-size: 13px; color: var(--color-text-secondary); padding: 2px; cursor: pointer; }
+
+.editor-panel { width: 320px; min-width: 320px; background: var(--color-background-primary); border-right: 0.5px solid var(--color-border-tertiary); display: flex; flex-direction: column; overflow: hidden; }
+.panel-header { padding: 14px 16px; border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; justify-content: space-between; }
+.panel-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); }
+.panel-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+
+.field-group { display: flex; flex-direction: column; gap: 5px; }
+.field-label { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+.field-input { font-size: 13px; padding: 7px 10px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-secondary); color: var(--color-text-primary); width: 100%; resize: none; font-family: inherit; }
+.field-input:focus { outline: none; border-color: var(--color-border-primary); }
+.field-textarea { min-height: 72px; line-height: 1.5; }
+
+.color-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.color-swatch { width: 22px; height: 22px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.12s; }
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.selected { border-color: var(--color-border-primary); }
+
+.img-upload { border: 1px dashed var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 16px; text-align: center; cursor: pointer; background: var(--color-background-secondary); }
+.img-upload:hover { border-color: var(--color-border-primary); }
+.img-upload-icon { font-size: 20px; color: var(--color-text-secondary); margin-bottom: 4px; }
+.img-upload-text { font-size: 11px; color: var(--color-text-secondary); }
+
+.toggle-row { display: flex; align-items: center; justify-content: space-between; }
+.toggle-label { font-size: 12px; color: var(--color-text-primary); }
+.toggle { width: 36px; height: 20px; border-radius: 10px; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-secondary); cursor: pointer; position: relative; transition: background 0.2s; }
+.toggle.on { background: #1D9E75; border-color: #0F6E56; }
+.toggle-dot { width: 14px; height: 14px; border-radius: 50%; background: #fff; position: absolute; top: 2px; left: 3px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle.on .toggle-dot { left: 19px; }
+
+.panel-footer { padding: 12px 16px; border-top: 0.5px solid var(--color-border-tertiary); display: flex; gap: 8px; }
+.btn-save { flex: 1; padding: 8px; font-size: 12px; font-weight: 500; background: #1D9E75; border: none; border-radius: var(--border-radius-md); color: #fff; cursor: pointer; }
+.btn-reset { padding: 8px 12px; font-size: 12px; color: var(--color-text-secondary); background: none; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); cursor: pointer; }
+
+.preview-pane { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.preview-toolbar { padding: 10px 16px; border-bottom: 0.5px solid var(--color-border-tertiary); background: var(--color-background-primary); display: flex; align-items: center; gap: 10px; }
+.preview-label { font-size: 11px; color: var(--color-text-secondary); }
+.device-btns { display: flex; gap: 4px; }
+.device-btn { padding: 4px 10px; font-size: 11px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: none; cursor: pointer; color: var(--color-text-secondary); }
+.device-btn.active { background: var(--color-background-secondary); color: var(--color-text-primary); border-color: var(--color-border-primary); }
+.preview-url { flex: 1; background: var(--color-background-secondary); border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 5px 10px; font-size: 11px; color: var(--color-text-secondary); font-family: var(--font-mono); }
+.preview-actions { display: flex; gap: 6px; }
+.btn-publish { padding: 6px 14px; font-size: 11px; font-weight: 500; background: #4a9460; border: none; border-radius: var(--border-radius-md); color: #fff; cursor: pointer; }
+.btn-preview-ext { padding: 6px 10px; font-size: 11px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: none; cursor: pointer; color: var(--color-text-secondary); }
+
+.preview-frame { flex: 1; overflow-y: auto; background: var(--color-background-tertiary); padding: 0; display: flex; justify-content: center; }
+.preview-inner { width: 100%; background: #040d08; overflow: hidden; position: relative; }
+
+.saved-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1D9E75; color: #fff; font-size: 12px; padding: 8px 18px; border-radius: 100px; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 999; }
+.saved-toast.show { opacity: 1; }
+
+.divider { height: 0.5px; background: var(--color-border-tertiary); margin: 2px 0; }
+
+.add-section-btn { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: var(--border-radius-md); cursor: pointer; border: 0.5px dashed var(--color-border-secondary); background: none; width: 100%; color: var(--color-text-secondary); font-size: 12px; margin-top: 4px; }
+.add-section-btn:hover { background: var(--color-background-secondary); }
+
+.room-card-mini { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 10px; margin-bottom: 8px; border: 0.5px solid var(--color-border-tertiary); }
+.room-mini-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.room-mini-name { font-size: 12px; font-weight: 500; color: var(--color-text-primary); }
+.expand-btn { font-size: 11px; color: var(--color-text-secondary); cursor: pointer; background: none; border: none; }
+
+.badge-on { background: var(--color-background-success); color: var(--color-text-success); font-size: 10px; padding: 2px 7px; border-radius: 100px; font-weight: 500; }
+.badge-off { background: var(--color-background-secondary); color: var(--color-text-secondary); font-size: 10px; padding: 2px 7px; border-radius: 100px; }
+</style>
+
+<div class="admin-shell">
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+        <i class="ti ti-arrow-left" style="font-size:13px;color:var(--color-text-secondary);cursor:pointer"></i>
+        <span class="sidebar-title">Homestay · Aambal Retreat</span>
+      </div>
+      <div class="sidebar-subtitle">Editing: /homestay</div>
+    </div>
+  </div>
+
+  <div style="padding:10px 12px 4px;font-size:10px;font-weight:500;color:var(--color-text-secondary);letter-spacing:0.07em;text-transform:uppercase">Page sections</div>
+  <div class="sections-list" id="sectionsList">
+
+    <div class="section-item active" data-sec="hero" onclick="selectSection('hero', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-photo sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">Hero</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="section-item" data-sec="strip" onclick="selectSection('strip', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-marquee sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">Inclusion strip</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="section-item" data-sec="about" onclick="selectSection('about', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-building sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">About</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="section-item" data-sec="rooms" onclick="selectSection('rooms', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-bed sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">Rooms</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="section-item" data-sec="amenities" onclick="selectSection('amenities', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-sparkles sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">Amenities</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="section-item" data-sec="gallery" onclick="selectSection('gallery', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-layout-grid sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">Gallery</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="section-item" data-sec="testimonials" onclick="selectSection('testimonials', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-quote sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">Testimonials</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="section-item" data-sec="location" onclick="selectSection('location', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-map-pin sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">Location</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="section-item" data-sec="cta" onclick="selectSection('cta', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-calendar sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">Reserve CTA</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="section-item" data-sec="footer" onclick="selectSection('footer', this)">
+      <i class="ti ti-drag-drop sec-icon drag-handle" aria-hidden="true"></i>
+      <i class="ti ti-layout-bottombar sec-icon" aria-hidden="true"></i>
+      <span class="sec-label">Footer</span>
+      <i class="ti ti-eye sec-eye" aria-hidden="true"></i>
+    </div>
+
+    <div class="divider" style="margin:8px 0"></div>
+    <button class="add-section-btn"><i class="ti ti-plus" style="font-size:13px" aria-hidden="true"></i> Add section</button>
+  </div>
+
+  <div style="padding:10px 12px;border-top:0.5px solid var(--color-border-tertiary)">
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+      <div style="width:8px;height:8px;border-radius:50%;background:#1D9E75;flex-shrink:0"></div>
+      <span style="font-size:11px;color:var(--color-text-secondary)">Live · Last saved 2 min ago</span>
+    </div>
+  </div>
+</div>
+
+<div class="editor-panel">
+  <div class="panel-header">
+    <span class="panel-title" id="panelTitle">Hero section</span>
+    <div style="display:flex;gap:6px">
+      <button onclick="duplicateSection()" style="font-size:11px;color:var(--color-text-secondary);background:none;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:4px 8px;cursor:pointer">Duplicate</button>
+      <button onclick="deleteSection()" style="font-size:11px;color:var(--color-text-danger);background:none;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:4px 8px;cursor:pointer">Remove</button>
+    </div>
+  </div>
+
+  <div class="panel-body" id="panelBody">
+  </div>
+
+  <div class="panel-footer">
+    <button class="btn-reset" onclick="resetSection()">Reset</button>
+    <button class="btn-save" onclick="saveSection()">Save section</button>
+  </div>
+</div>
+
+<div class="preview-pane">
+  <div class="preview-toolbar">
+    <span class="preview-label">Preview</span>
+    <div class="device-btns">
+      <button class="device-btn active" onclick="setDevice('desktop',this)"><i class="ti ti-device-desktop" aria-hidden="true"></i></button>
+      <button class="device-btn" onclick="setDevice('tablet',this)"><i class="ti ti-device-tablet" aria-hidden="true"></i></button>
+      <button class="device-btn" onclick="setDevice('mobile',this)"><i class="ti ti-device-mobile" aria-hidden="true"></i></button>
+    </div>
+    <div class="preview-url">aambalvasantham.in/homestay</div>
+    <div class="preview-actions">
+      <button class="btn-preview-ext"><i class="ti ti-external-link" style="font-size:12px" aria-hidden="true"></i></button>
+      <button class="btn-publish" onclick="publishPage()">Publish</button>
+    </div>
+  </div>
+
+  <div class="preview-frame" id="previewFrame">
+    <div class="preview-inner" id="previewInner">
+
+      <div id="prev-hero" class="prev-section" onclick="selectSection('hero', document.querySelector('[data-sec=hero]'))" style="cursor:pointer;position:relative;height:260px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(160deg,#071a0a,#0d2b12,#04120a)">
+        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(4,13,8,0.2),rgba(4,13,8,0.7));z-index:1"></div>
+        <div style="position:relative;z-index:2;text-align:center;padding:0 2rem">
+          <div id="prev-hero-eyebrow" style="font-size:9px;letter-spacing:0.4em;text-transform:uppercase;color:#a8e6b0;margin-bottom:14px;opacity:0.8">✦ The Aambal Retreat · Kottayam · Kerala ✦</div>
+          <div id="prev-hero-h1" style="font-family:Georgia,serif;font-size:2.6rem;font-weight:300;color:#f0ede6;line-height:1.1;margin-bottom:12px">Where the festival<br><em style="color:#6db87a">comes to rest.</em></div>
+          <div id="prev-hero-sub" style="font-size:0.85rem;color:rgba(240,237,230,0.55);max-width:420px;margin:0 auto 20px;line-height:1.6">A heritage garden villa, exclusively for our premium photography guests. Seven rooms. One lotus pond. Ten minutes from the temple.</div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+            <a style="background:linear-gradient(135deg,#4a9460,#6db87a);color:#fff;border-radius:100px;padding:9px 22px;text-decoration:none;font-size:0.8rem;font-weight:600">View rooms</a>
+            <a style="border:1px solid rgba(109,184,122,0.2);color:rgba(240,237,230,0.5);border-radius:100px;padding:9px 22px;text-decoration:none;font-size:0.8rem">Explore amenities →</a>
+          </div>
+        </div>
+        <div style="position:absolute;top:10px;right:10px;z-index:3;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:3px 8px;border-radius:100px;font-weight:500">Click to edit</div>
+      </div>
+
+      <div id="prev-strip" class="prev-section" onclick="selectSection('strip', document.querySelector('[data-sec=strip]'))" style="cursor:pointer;border-top:1px solid rgba(109,184,122,0.15);border-bottom:1px solid rgba(109,184,122,0.15);padding:12px 16px;background:rgba(74,148,96,0.04);overflow:hidden;position:relative">
+        <div style="display:flex;gap:28px;white-space:nowrap;font-size:11px;color:rgba(240,237,230,0.7)">
+          <span>🛏️ <b style="color:#f0ede6">1–3 night stay</b> — Per package</span>
+          <span>✦</span>
+          <span>🍳 <b style="color:#f0ede6">Ayurvedic breakfast</b> — All mornings</span>
+          <span>✦</span>
+          <span>🚐 <b style="color:#f0ede6">Festival transfers</b> — Morning & evening</span>
+          <span>✦</span>
+          <span>📶 <b style="color:#f0ede6">100 Mbps wifi</b> — Edit-grade speed</span>
+        </div>
+        <div style="position:absolute;top:4px;right:8px;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:2px 7px;border-radius:100px">Click to edit</div>
+      </div>
+
+      <div id="prev-about" class="prev-section" onclick="selectSection('about', document.querySelector('[data-sec=about]'))" style="cursor:pointer;padding:40px 28px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center;background:#040d08;position:relative">
+        <div>
+          <div style="font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#6db87a;margin-bottom:10px;opacity:0.8">✦ About the Retreat ✦</div>
+          <div id="prev-about-h2" style="font-family:Georgia,serif;font-size:1.6rem;font-weight:300;color:#f0ede6;line-height:1.15;margin-bottom:12px">A century lived in<br><em style="color:#a8e6b0">ceremony & stillness.</em></div>
+          <div style="width:36px;height:1px;background:linear-gradient(90deg,#4a9460,transparent);margin-bottom:12px"></div>
+          <p id="prev-about-body" style="font-size:12px;color:rgba(240,237,230,0.45);line-height:1.8">Built in 1924 by the Pillai family as a spice-trader's mansion, the Aambal Retreat has witnessed a century of Vasantham festivals from its verandas...</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:100px 100px;gap:8px">
+          <div style="border-radius:10px;background:linear-gradient(160deg,#0d1f10,#071009);border:1px solid rgba(109,184,122,0.15);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.6">🌿</div>
+          <div style="grid-row:1/3;border-radius:10px;background:linear-gradient(160deg,#0d1f10,#071009);border:1px solid rgba(109,184,122,0.15);display:flex;align-items:center;justify-content:center;font-size:28px;opacity:0.6">🪷</div>
+          <div style="border-radius:10px;background:linear-gradient(160deg,#0d1f10,#071009);border:1px solid rgba(109,184,122,0.15);display:flex;align-items:center;justify-content:center;font-size:24px;opacity:0.6">🛕</div>
+        </div>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:3px 8px;border-radius:100px">Click to edit</div>
+      </div>
+
+      <div id="prev-rooms" class="prev-section" onclick="selectSection('rooms', document.querySelector('[data-sec=rooms]'))" style="cursor:pointer;padding:40px 28px;background:linear-gradient(180deg,#040d08,#071009 50%,#040d08);position:relative">
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#6db87a;opacity:0.8;margin-bottom:8px">✦ Accommodation ✦</div>
+          <div style="font-family:Georgia,serif;font-size:1.6rem;font-weight:300;color:#f0ede6">Seven rooms, <em style="color:#a8e6b0">seven stories.</em></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          <div style="background:linear-gradient(160deg,rgba(74,148,96,0.1),rgba(7,16,9,0.97));border:1px solid rgba(74,148,96,0.3);border-radius:14px;padding:14px">
+            <div style="font-size:22px;margin-bottom:8px">🪷</div>
+            <div style="font-family:Georgia,serif;font-size:0.95rem;color:#f0ede6;margin-bottom:2px">Lotus Suite</div>
+            <div style="font-size:10px;color:#a8e6b0;font-style:italic;margin-bottom:8px">Pond-facing · King</div>
+            <div style="font-family:Georgia,serif;font-size:1.1rem;color:#4a9460">₹8,500<span style="font-size:9px;color:rgba(240,237,230,0.4)">/night</span></div>
+          </div>
+          <div style="background:linear-gradient(160deg,rgba(200,168,74,0.08),rgba(7,16,9,0.97));border:1px solid rgba(200,168,74,0.25);border-radius:14px;padding:14px">
+            <div style="font-size:22px;margin-bottom:8px">🛕</div>
+            <div style="font-family:Georgia,serif;font-size:0.95rem;color:#f0ede6;margin-bottom:2px">Temple View</div>
+            <div style="font-size:10px;color:#e8c97a;font-style:italic;margin-bottom:8px">Temple-facing · Queen</div>
+            <div style="font-family:Georgia,serif;font-size:1.1rem;color:#c8a84a">₹6,500<span style="font-size:9px;color:rgba(240,237,230,0.4)">/night</span></div>
+          </div>
+          <div style="background:linear-gradient(160deg,rgba(109,184,122,0.07),rgba(7,16,9,0.97));border:1px solid rgba(109,184,122,0.2);border-radius:14px;padding:14px">
+            <div style="font-size:22px;margin-bottom:8px">🌿</div>
+            <div style="font-family:Georgia,serif;font-size:0.95rem;color:#f0ede6;margin-bottom:2px">Garden Cottage</div>
+            <div style="font-size:10px;color:#6db87a;font-style:italic;margin-bottom:8px">Private garden</div>
+            <div style="font-family:Georgia,serif;font-size:1.1rem;color:#6db87a">₹5,500<span style="font-size:9px;color:rgba(240,237,230,0.4)">/night</span></div>
+          </div>
+          <div style="background:linear-gradient(160deg,rgba(167,139,250,0.07),rgba(7,16,9,0.97));border:1px solid rgba(167,139,250,0.2);border-radius:14px;padding:14px">
+            <div style="font-size:22px;margin-bottom:8px">📸</div>
+            <div style="font-family:Georgia,serif;font-size:0.95rem;color:#f0ede6;margin-bottom:2px">Photographer's Studio</div>
+            <div style="font-size:10px;color:#a78bfa;font-style:italic;margin-bottom:8px">Edit suite · North light</div>
+            <div style="font-family:Georgia,serif;font-size:1.1rem;color:#a78bfa">₹7,200<span style="font-size:9px;color:rgba(240,237,230,0.4)">/night</span></div>
+          </div>
+        </div>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:3px 8px;border-radius:100px">Click to edit</div>
+      </div>
+
+      <div id="prev-amenities" class="prev-section" onclick="selectSection('amenities', document.querySelector('[data-sec=amenities]'))" style="cursor:pointer;padding:40px 28px;background:#040d08;position:relative">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#6db87a;opacity:0.8;margin-bottom:8px">✦ What awaits you ✦</div>
+          <div style="font-family:Georgia,serif;font-size:1.5rem;font-weight:300;color:#f0ede6">Every morning a <em style="color:#a8e6b0">small ceremony.</em></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          ${['🍃 Ayurvedic Breakfast','🌅 Sunrise Temple Walk','🚁 Drone Prep Lounge','🎞 Edit Suite','🛶 Boat on Lotus Pond','🌿 Ayurvedic Therapy','🏛️ Heritage Library','🌙 Rooftop Stargazing'].map(a=>`<div style="background:rgba(255,255,255,0.025);border:1px solid rgba(109,184,122,0.15);border-radius:10px;padding:10px;font-size:18px">${a.split(' ')[0]}<div style="font-size:10px;color:#f0ede6;margin-top:5px;line-height:1.3">${a.slice(a.indexOf(' ')+1)}</div></div>`).join('')}
+        </div>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:3px 8px;border-radius:100px">Click to edit</div>
+      </div>
+
+      <div id="prev-gallery" class="prev-section" onclick="selectSection('gallery', document.querySelector('[data-sec=gallery]'))" style="cursor:pointer;padding:40px 28px;background:#071009;position:relative">
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#6db87a;opacity:0.8;margin-bottom:8px">✦ Gallery ✦</div>
+          <div style="font-family:Georgia,serif;font-size:1.5rem;font-weight:300;color:#f0ede6">The retreat <em style="color:#a8e6b0">in every light.</em></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          ${Array.from({length:6},(_,i)=>`<div style="aspect-ratio:4/3;border-radius:8px;background:linear-gradient(160deg,#0d1f10,#071009);border:1px solid rgba(109,184,122,0.15);display:flex;align-items:center;justify-content:center;font-size:20px;opacity:0.5">${['🌿','🪷','🛕','🏡','🌅','📸'][i]}</div>`).join('')}
+        </div>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:3px 8px;border-radius:100px">Click to edit</div>
+      </div>
+
+      <div id="prev-testimonials" class="prev-section" onclick="selectSection('testimonials', document.querySelector('[data-sec=testimonials]'))" style="cursor:pointer;padding:40px 28px;background:#040d08;position:relative">
+        <div style="max-width:480px;margin:0 auto;text-align:center">
+          <div style="font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#6db87a;opacity:0.8;margin-bottom:8px">✦ Guest voices ✦</div>
+          <div style="font-family:Georgia,serif;font-size:1.5rem;font-weight:300;color:#f0ede6;margin-bottom:20px"><em style="color:#a8e6b0">Heard at checkout.</em></div>
+          <div style="background:linear-gradient(160deg,rgba(74,148,96,0.08),rgba(7,16,9,0.95));border:1px solid rgba(109,184,122,0.15);border-radius:16px;padding:24px">
+            <div style="font-size:16px;color:#c8a84a;letter-spacing:3px;margin-bottom:12px">★★★★★</div>
+            <p style="font-family:Georgia,serif;font-size:0.9rem;font-style:italic;color:#f0ede6;line-height:1.6;margin-bottom:14px">"We stayed two nights and I genuinely didn't want to leave. The lotus pond at 5am with mist rising..."</p>
+            <div style="font-size:11px;font-weight:600;color:#f0ede6">Priya &amp; Arun</div>
+            <div style="font-size:10px;color:#a8e6b0">Bridal Package</div>
+          </div>
+        </div>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:3px 8px;border-radius:100px">Click to edit</div>
+      </div>
+
+      <div id="prev-location" class="prev-section" onclick="selectSection('location', document.querySelector('[data-sec=location]'))" style="cursor:pointer;padding:36px 28px;background:#071009;position:relative;display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center">
+        <div>
+          <div style="font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#6db87a;opacity:0.8;margin-bottom:8px">✦ How to find us ✦</div>
+          <div style="font-family:Georgia,serif;font-size:1.3rem;font-weight:300;color:#f0ede6;margin-bottom:16px">Ten minutes from<br><em style="color:#a8e6b0">everywhere that matters.</em></div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            ${[['🛕','Main temple tank','800 m · 10 min walk'],['🚂','Kottayam railway','4 km · 8 min drive'],['✈️','Cochin Airport','74 km · 90 min']].map(([ic,lb,dist])=>`<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.025);border:1px solid rgba(109,184,122,0.15);border-radius:8px;padding:9px 12px"><span style="font-size:16px">${ic}</span><div><div style="font-size:11px;color:#f0ede6;font-weight:500">${lb}</div><div style="font-size:10px;color:rgba(240,237,230,0.45)">${dist}</div></div></div>`).join('')}
+          </div>
+        </div>
+        <div style="height:200px;border-radius:14px;background:linear-gradient(160deg,#0d1f10,#071a09);border:1px solid rgba(109,184,122,0.15);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;opacity:0.7">
+          <i class="ti ti-map" style="font-size:32px;color:#6db87a" aria-hidden="true"></i>
+          <span style="font-size:10px;color:#6db87a;letter-spacing:0.2em;text-transform:uppercase">Map embed</span>
+        </div>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:3px 8px;border-radius:100px">Click to edit</div>
+      </div>
+
+      <div id="prev-cta" class="prev-section" onclick="selectSection('cta', document.querySelector('[data-sec=cta]'))" style="cursor:pointer;padding:40px 28px;background:#040d08;text-align:center;position:relative">
+        <div style="font-size:32px;margin-bottom:14px">🪷</div>
+        <div style="font-size:9px;letter-spacing:0.3em;text-transform:uppercase;color:#6db87a;opacity:0.8;margin-bottom:8px">✦ Reserve your stay ✦</div>
+        <div style="font-family:Georgia,serif;font-size:1.5rem;font-weight:300;color:#f0ede6;margin-bottom:12px">Only <em style="color:#a8e6b0">Full Day &amp; Bridal</em><br>guests may book.</div>
+        <p id="prev-cta-body" style="font-size:12px;color:rgba(240,237,230,0.45);max-width:380px;margin:0 auto 20px;line-height:1.7">Confirm your photography package first, then reach us on WhatsApp with your package reference number.</p>
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+          <a style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a7a40,#25a244);color:#fff;border-radius:100px;padding:10px 22px;text-decoration:none;font-size:12px;font-weight:600">📱 Reserve on WhatsApp</a>
+          <a style="border:1px solid rgba(109,184,122,0.15);color:rgba(240,237,230,0.45);border-radius:100px;padding:10px 20px;text-decoration:none;font-size:12px">Book now</a>
+        </div>
+        <div style="position:absolute;top:10px;right:10px;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:3px 8px;border-radius:100px">Click to edit</div>
+      </div>
+
+      <div id="prev-footer" class="prev-section" onclick="selectSection('footer', document.querySelector('[data-sec=footer]'))" style="cursor:pointer;border-top:1px solid rgba(109,184,122,0.15);padding:20px 28px;background:#040d08;display:flex;justify-content:space-between;align-items:center;position:relative">
+        <div>
+          <div style="font-family:Georgia,serif;font-size:1.1rem;color:#a8e6b0">The Aambal Retreat</div>
+          <div style="font-size:10px;color:rgba(240,237,230,0.4);margin-top:3px">Kottayam · Kerala · India · Est. 1924</div>
+        </div>
+        <div style="text-align:right;font-size:11px;color:rgba(240,237,230,0.4)">
+          <div id="prev-footer-email">hello@aambalstudio.in</div>
+          <div id="prev-footer-phone">+91 98xxx xxxxx</div>
+        </div>
+        <div style="position:absolute;top:6px;right:6px;background:rgba(74,148,96,0.85);color:#fff;font-size:9px;padding:2px 7px;border-radius:100px">Click to edit</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</div>
+
+<div class="saved-toast" id="savedToast">Changes saved</div>
+
+<script>
+const G = {
+  green:'#4a9460', greenLight:'#6db87a', greenPale:'#a8e6b0', gold:'#c8a84a',
+  ink:'#040d08', text:'#f0ede6', muted:'rgba(240,237,230,0.45)'
+};
+
+const sectionConfigs = {
+  hero: {
+    title: 'Hero section',
+    fields: [
+      { key:'eyebrow', label:'Eyebrow text', type:'text', val:'The Aambal Retreat · Kottayam · Kerala', preview:'prev-hero-eyebrow' },
+      { key:'headline', label:'Headline', type:'textarea', val:'Where the festival comes to rest.', preview:'prev-hero-h1' },
+      { key:'subtext', label:'Subheading', type:'textarea', val:'A heritage garden villa, exclusively for our premium photography guests. Seven rooms. One lotus pond. Ten minutes from the temple.', preview:'prev-hero-sub' },
+      { key:'btn1', label:'Primary button text', type:'text', val:'View rooms' },
+      { key:'btn2', label:'Secondary button text', type:'text', val:'Explore amenities →' },
+      { key:'bgImage', label:'Background image', type:'image' },
+      { key:'overlay', label:'Show dark overlay', type:'toggle', val:true },
+    ]
+  },
+  strip: {
+    title: 'Inclusion strip',
+    fields: [
+      { key:'visible', label:'Show section', type:'toggle', val:true },
+      { key:'speed', label:'Scroll speed (seconds)', type:'text', val:'30' },
+      { key:'note', label:'Items (one per line)', type:'textarea', val:'🛏️ 1–3 night stay — Per package\n🍳 Ayurvedic breakfast — All mornings\n🚐 Festival transfers — Morning & evening\n🎒 Gear safe storage — 24h access\n💧 Welcome ritual — Flower bath & chai\n📶 100 Mbps wifi — Edit-grade speed' },
+    ]
+  },
+  about: {
+    title: 'About section',
+    fields: [
+      { key:'heading', label:'Section heading', type:'textarea', val:'A century lived in ceremony & stillness.', preview:'prev-about-h2' },
+      { key:'body1', label:'First paragraph', type:'textarea', val:'Built in 1924 by the Pillai family as a spice-trader\'s mansion, the Aambal Retreat has witnessed a century of Vasantham festivals from its verandas.', preview:'prev-about-body' },
+      { key:'body2', label:'Second paragraph', type:'textarea', val:'Today seven rooms house photographers, families, and couples who want the festival not just as visitors, but as participants.' },
+      { key:'img1', label:'Image 1 (Garden)', type:'image' },
+      { key:'img2', label:'Image 2 (Lotus pond)', type:'image' },
+      { key:'img3', label:'Image 3 (Temple view)', type:'image' },
+    ]
+  },
+  rooms: {
+    title: 'Rooms section',
+    fields: [
+      { key:'heading', label:'Section heading', type:'text', val:'Seven rooms, seven stories.' },
+      { key:'room1name', label:'Room 1 name', type:'text', val:'Lotus Suite' },
+      { key:'room1price', label:'Room 1 price', type:'text', val:'₹8,500 / night' },
+      { key:'room1tagline', label:'Room 1 tagline', type:'text', val:'Pond-facing · King bed' },
+      { key:'room1badge', label:'Room 1 badge', type:'text', val:'Most requested' },
+      { key:'room2name', label:'Room 2 name', type:'text', val:'Temple View Room' },
+      { key:'room2price', label:'Room 2 price', type:'text', val:'₹6,500 / night' },
+      { key:'room3name', label:'Room 3 name', type:'text', val:'Garden Cottage' },
+      { key:'room3price', label:'Room 3 price', type:'text', val:'₹5,500 / night' },
+      { key:'room4name', label:'Room 4 name', type:'text', val:"Photographer's Studio" },
+      { key:'room4price', label:'Room 4 price', type:'text', val:'₹7,200 / night' },
+    ]
+  },
+  amenities: {
+    title: 'Amenities section',
+    fields: [
+      { key:'heading', label:'Section heading', type:'text', val:'Every morning a small ceremony.' },
+      { key:'a1', label:'Amenity 1', type:'text', val:'🍃 Ayurvedic Breakfast' },
+      { key:'a2', label:'Amenity 2', type:'text', val:'🌅 Sunrise Temple Walk' },
+      { key:'a3', label:'Amenity 3', type:'text', val:'🚁 Drone Prep Lounge' },
+      { key:'a4', label:'Amenity 4', type:'text', val:'🎞 Edit Suite' },
+      { key:'a5', label:'Amenity 5', type:'text', val:'🛶 Boat on Lotus Pond' },
+      { key:'a6', label:'Amenity 6', type:'text', val:'🌿 Ayurvedic Therapy' },
+      { key:'a7', label:'Amenity 7', type:'text', val:'🏛️ Heritage Library' },
+      { key:'a8', label:'Amenity 8', type:'text', val:'🌙 Rooftop Stargazing' },
+    ]
+  },
+  gallery: {
+    title: 'Gallery section',
+    fields: [
+      { key:'heading', label:'Section heading', type:'text', val:'The retreat in every light.' },
+      { key:'note', label:'Caption (shown below heading)', type:'text', val:'Replace placeholders with your actual homestay photography' },
+      { key:'img1', label:'Image 1 — Lotus pond', type:'image' },
+      { key:'img2', label:'Image 2 — Temple view', type:'image' },
+      { key:'img3', label:'Image 3 — Garden', type:'image' },
+      { key:'img4', label:'Image 4 — Suite', type:'image' },
+      { key:'img5', label:'Image 5 — Breakfast', type:'image' },
+      { key:'img6', label:'Image 6 — Rooftop', type:'image' },
+    ]
+  },
+  testimonials: {
+    title: 'Testimonials section',
+    fields: [
+      { key:'t1name', label:'Guest 1 name', type:'text', val:'Priya & Arun' },
+      { key:'t1pkg', label:'Guest 1 package', type:'text', val:'Bridal Package' },
+      { key:'t1quote', label:'Guest 1 quote', type:'textarea', val:"We stayed two nights and I genuinely didn't want to leave. The lotus pond at 5am with mist rising — our photographer got a shot we'll frame forever." },
+      { key:'t2name', label:'Guest 2 name', type:'text', val:'The Krishnamurthy Family' },
+      { key:'t2pkg', label:'Guest 2 package', type:'text', val:'Full Day Coverage' },
+      { key:'t2quote', label:'Guest 2 quote', type:'textarea', val:'All 12 of us stayed in three rooms. The breakfast alone was worth it.' },
+      { key:'t3name', label:'Guest 3 name', type:'text', val:'Deepa Nair' },
+      { key:'t3pkg', label:'Guest 3 package', type:'text', val:'Full Day + Drone' },
+      { key:'t3quote', label:'Guest 3 quote', type:'textarea', val:'As a solo traveller this felt completely safe and extraordinarily peaceful.' },
+    ]
+  },
+  location: {
+    title: 'Location section',
+    fields: [
+      { key:'heading', label:'Section heading', type:'text', val:"Ten minutes from everywhere that matters." },
+      { key:'p1label', label:'Point 1 label', type:'text', val:'Main temple tank' },
+      { key:'p1dist', label:'Point 1 distance', type:'text', val:'800 m · 10 min walk' },
+      { key:'p2label', label:'Point 2 label', type:'text', val:'Kottayam railway station' },
+      { key:'p2dist', label:'Point 2 distance', type:'text', val:'4 km · 8 min drive' },
+      { key:'p3label', label:'Point 3 label', type:'text', val:'Cochin International Airport' },
+      { key:'p3dist', label:'Point 3 distance', type:'text', val:'74 km · 90 min drive' },
+      { key:'mapEmbed', label:'Google Maps embed URL', type:'text', val:'' },
+    ]
+  },
+  cta: {
+    title: 'Reserve CTA section',
+    fields: [
+      { key:'heading', label:'Heading', type:'textarea', val:'Only Full Day & Bridal guests may book.' },
+      { key:'body', label:'Body text', type:'textarea', val:'Confirm your photography package first, then reach us on WhatsApp with your package reference number to reserve a room.', preview:'prev-cta-body' },
+      { key:'waNumber', label:'WhatsApp number', type:'text', val:'+919800000000' },
+      { key:'waMsg', label:'WhatsApp pre-fill message', type:'textarea', val:"Hi, I'd like to reserve a room at the Aambal Retreat" },
+      { key:'c1', label:'Info card 1', type:'text', val:'💳 No payment now' },
+      { key:'c2', label:'Info card 2', type:'text', val:'🔄 Free cancellation' },
+      { key:'c3', label:'Info card 3', type:'text', val:'🎁 Breakfast included' },
+      { key:'c4', label:'Info card 4', type:'text', val:'🚐 Free festival transfer' },
+    ]
+  },
+  footer: {
+    title: 'Footer',
+    fields: [
+      { key:'name', label:'Property name', type:'text', val:'The Aambal Retreat' },
+      { key:'tagline', label:'Location tagline', type:'text', val:'Kottayam · Kerala · India · Est. 1924' },
+      { key:'email', label:'Email', type:'text', val:'hello@aambalstudio.in', preview:'prev-footer-email' },
+      { key:'phone', label:'Phone', type:'text', val:'+91 98xxx xxxxx', preview:'prev-footer-phone' },
+    ]
+  }
+};
+
+let currentSection = 'hero';
+
+function selectSection(key, el) {
+  currentSection = key;
+  document.querySelectorAll('.section-item').forEach(x => x.classList.remove('active'));
+  el.classList.add('active');
+  renderPanel(key);
+  highlightPreview(key);
+}
+
+function highlightPreview(key) {
+  document.querySelectorAll('.prev-section').forEach(s => {
+    s.style.outline = 'none';
+  });
+  const el = document.getElementById('prev-' + key);
+  if(el) {
+    el.style.outline = '2px solid rgba(74,148,96,0.7)';
+    el.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+}
+
+function renderPanel(key) {
+  const cfg = sectionConfigs[key];
+  document.getElementById('panelTitle').textContent = cfg.title;
+  const body = document.getElementById('panelBody');
+  body.innerHTML = '';
+
+  cfg.fields.forEach(f => {
+    const g = document.createElement('div');
+    g.className = 'field-group';
+
+    if(f.type === 'toggle') {
+      g.innerHTML = `<div class="toggle-row"><span class="toggle-label">${f.label}</span><div class="toggle ${f.val?'on':''}" id="tog-${f.key}" onclick="toggleField('${f.key}',this)"><div class="toggle-dot"></div></div></div>`;
+    } else if(f.type === 'image') {
+      g.innerHTML = `<label class="field-label">${f.label}</label><div class="img-upload" onclick="triggerUpload('${f.key}')"><div class="img-upload-icon"><i class="ti ti-upload" aria-hidden="true"></i></div><div class="img-upload-text">Click to upload or drag & drop</div><div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">JPG, PNG, WebP · max 8MB</div></div>`;
+    } else if(f.type === 'textarea') {
+      g.innerHTML = `<label class="field-label">${f.label}</label><textarea class="field-input field-textarea" id="fld-${f.key}" oninput="liveUpdate('${f.key}','${f.preview||''}',this.value)">${f.val||''}</textarea>`;
+    } else {
+      g.innerHTML = `<label class="field-label">${f.label}</label><input class="field-input" type="text" id="fld-${f.key}" value="${(f.val||'').replace(/"/g,'&quot;')}" oninput="liveUpdate('${f.key}','${f.preview||''}',this.value)">`;
+    }
+    body.appendChild(g);
+  });
+}
+
+function liveUpdate(key, previewId, value) {
+  if(previewId) {
+    const el = document.getElementById(previewId);
+    if(el) el.textContent = value;
+  }
+}
+
+function toggleField(key, el) {
+  el.classList.toggle('on');
+}
+
+function triggerUpload(key) {
+  showToast('Image upload would open file picker here');
+}
+
+function saveSection() {
+  showToast('Section saved');
+}
+
+function resetSection() {
+  renderPanel(currentSection);
+  showToast('Reset to defaults');
+}
+
+function duplicateSection() {
+  showToast('Section duplicated');
+}
+
+function deleteSection() {
+  showToast('Section removed from page');
+}
+
+function publishPage() {
+  showToast('Page published to aambalvasantham.in/homestay');
+}
+
+function setDevice(d, btn) {
+  document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const inner = document.getElementById('previewInner');
+  if(d==='mobile') { inner.style.maxWidth='375px'; inner.style.margin='0 auto'; }
+  else if(d==='tablet') { inner.style.maxWidth='768px'; inner.style.margin='0 auto'; }
+  else { inner.style.maxWidth='100%'; inner.style.margin='0'; }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('savedToast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+renderPanel('hero');
+</script>

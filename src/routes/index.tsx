@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { Nav } from "@/components/Nav";
 import { FlyingDrone } from "@/components/FlyingDrone";
@@ -11,6 +11,8 @@ import portrait from "@/assets/portrait-festival.jpg";
 import { InstagramFeed } from "@/components/InstagramFeed";
 import { GallerySection } from "@/components/GallerySection";
 import { HomestaySection } from "@/components/HomestaySection";
+import { collection, onSnapshot, query, orderBy, limit } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -55,6 +57,14 @@ const processSteps = [
   { n: "03", title: "Same-day previews",     desc: "Five curated preview images on WhatsApp before midnight. You'll sleep well.", icon: "⚡" },
   { n: "04", title: "Full gallery in 48hrs", desc: "Every edited image delivered to a private gallery. Yours forever.", icon: "🖼️" },
 ];
+
+// ── types ─────────────────────────────────────────────────────────────────────
+type MediaItem = {
+  id?: string;
+  type: "image" | "video";
+  src: string;
+  caption: string;
+};
 
 // ── layout wrapper ────────────────────────────────────────────────────────────
 function Section({ id, children, className = "" }: { id?: string; children: React.ReactNode; className?: string }) {
@@ -368,6 +378,27 @@ function UrgencyStrip() {
 
 // ── Main Home ─────────────────────────────────────────────────────────────────
 function Home() {
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+
+  // Fetch gallery items in real-time
+  useEffect(() => {
+    const q = query(
+      collection(db, "media_gallery"),
+      orderBy("createdAt", "desc"),
+      limit(6)
+    );
+    
+    const unsub = onSnapshot(q, (snap) => {
+      const arr: MediaItem[] = [];
+      snap.forEach((d) => {
+        arr.push({ id: d.id, ...(d.data() as MediaItem) });
+      });
+      setMediaItems(arr);
+    });
+    
+    return () => unsub();
+  }, []);
+
   return (
     <div id="top" className="relative overflow-hidden">
       <Toaster theme="dark" position="top-center" richColors />
@@ -428,6 +459,53 @@ function Home() {
 
       {/* ══════════ SOCIAL PROOF MARQUEE ══════════ */}
       <SocialProofBar />
+
+      {/* ══════════ CMS GALLERY FEED ══════════ */}
+      {mediaItems.length > 0 && (
+        <Section id="dynamic-gallery" className="py-24 bg-black/40">
+          <div className="mb-14 text-center">
+            <p className="text-xs uppercase tracking-[0.3em] text-primary mb-4">Latest Work</p>
+            <h2 className="font-display text-4xl md:text-5xl">
+              From the <span className="italic text-gradient-gold">field.</span>
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {mediaItems.map((item, i) => (
+              <motion.div 
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="group relative aspect-square overflow-hidden rounded-2xl border border-white/10"
+              >
+                {item.type === "image" ? (
+                  <img
+                    src={item.src}
+                    alt={item.caption}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                ) : (
+                  <video
+                    src={item.src}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="h-full w-full object-cover"
+                  />
+                )}
+                
+                {/* Hover overlay with caption */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex items-end p-6">
+                  <p className="text-sm font-medium text-white">{item.caption}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       {/* ══════════ PACKAGES TEASER (replaces old grid) ══════════ */}
       <PackageTeaserSection />

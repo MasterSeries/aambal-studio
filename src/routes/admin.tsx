@@ -327,18 +327,7 @@ function AdminPage() {
       "#ec4899",
   },
 
-  {
-    label:
-      "Homestay CMS",
-
-    icon: "🏡",
-
-    to:
-      "/homestay-editor",
-
-    color:
-      "#22c55e",
-  },
+  
   {
   label:
     "Package CMS",
@@ -350,6 +339,19 @@ function AdminPage() {
 
   color:
     "#f59e0b",
+},
+{
+  label:
+    "Homestay Editor",
+
+  icon:
+    "🏡",
+
+  to:
+    "/homestay-editor",
+
+  color:
+    "#22c55e",
 },
 
               ].map((btn) =>

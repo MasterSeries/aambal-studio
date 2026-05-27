@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ShootManagerRouteImport } from './routes/shoot-manager'
 import { Route as ShootDetailsRouteImport } from './routes/shoot-details'
+import { Route as ReserveRouteImport } from './routes/reserve'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PackagesRouteImport } from './routes/packages'
 import { Route as PackageEditorRouteImport } from './routes/package-editor'
@@ -46,6 +47,11 @@ const ShootManagerRoute = ShootManagerRouteImport.update({
 const ShootDetailsRoute = ShootDetailsRouteImport.update({
   id: '/shoot-details',
   path: '/shoot-details',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReserveRoute = ReserveRouteImport.update({
+  id: '/reserve',
+  path: '/reserve',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileRoute = ProfileRouteImport.update({
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/package-editor': typeof PackageEditorRoute
   '/packages': typeof PackagesRoute
   '/profile': typeof ProfileRoute
+  '/reserve': typeof ReserveRoute
   '/shoot-details': typeof ShootDetailsRoute
   '/shoot-manager': typeof ShootManagerRoute
   '/signup': typeof SignupRoute
@@ -192,6 +199,7 @@ export interface FileRoutesByTo {
   '/package-editor': typeof PackageEditorRoute
   '/packages': typeof PackagesRoute
   '/profile': typeof ProfileRoute
+  '/reserve': typeof ReserveRoute
   '/shoot-details': typeof ShootDetailsRoute
   '/shoot-manager': typeof ShootManagerRoute
   '/signup': typeof SignupRoute
@@ -218,6 +226,7 @@ export interface FileRoutesById {
   '/package-editor': typeof PackageEditorRoute
   '/packages': typeof PackagesRoute
   '/profile': typeof ProfileRoute
+  '/reserve': typeof ReserveRoute
   '/shoot-details': typeof ShootDetailsRoute
   '/shoot-manager': typeof ShootManagerRoute
   '/signup': typeof SignupRoute
@@ -245,6 +254,7 @@ export interface FileRouteTypes {
     | '/package-editor'
     | '/packages'
     | '/profile'
+    | '/reserve'
     | '/shoot-details'
     | '/shoot-manager'
     | '/signup'
@@ -269,6 +279,7 @@ export interface FileRouteTypes {
     | '/package-editor'
     | '/packages'
     | '/profile'
+    | '/reserve'
     | '/shoot-details'
     | '/shoot-manager'
     | '/signup'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/package-editor'
     | '/packages'
     | '/profile'
+    | '/reserve'
     | '/shoot-details'
     | '/shoot-manager'
     | '/signup'
@@ -320,6 +332,7 @@ export interface RootRouteChildren {
   PackageEditorRoute: typeof PackageEditorRoute
   PackagesRoute: typeof PackagesRoute
   ProfileRoute: typeof ProfileRoute
+  ReserveRoute: typeof ReserveRoute
   ShootDetailsRoute: typeof ShootDetailsRoute
   ShootManagerRoute: typeof ShootManagerRoute
   SignupRoute: typeof SignupRoute
@@ -346,6 +359,13 @@ declare module '@tanstack/react-router' {
       path: '/shoot-details'
       fullPath: '/shoot-details'
       preLoaderRoute: typeof ShootDetailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reserve': {
+      id: '/reserve'
+      path: '/reserve'
+      fullPath: '/reserve'
+      preLoaderRoute: typeof ReserveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profile': {
@@ -522,6 +542,7 @@ const rootRouteChildren: RootRouteChildren = {
   PackageEditorRoute: PackageEditorRoute,
   PackagesRoute: PackagesRoute,
   ProfileRoute: ProfileRoute,
+  ReserveRoute: ReserveRoute,
   ShootDetailsRoute: ShootDetailsRoute,
   ShootManagerRoute: ShootManagerRoute,
   SignupRoute: SignupRoute,
