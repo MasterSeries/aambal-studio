@@ -5,12 +5,24 @@ import { BookingForm } from "@/components/BookingForm";
 import {
   sendWhatsAppMessage,
 } from "@/lib/sendWhatsapp";
+
 export const Route = createFileRoute("/booking-confirmed")({
-  head: () => ({
-    meta: [{ title: "Book Your Session · Aambal Vasantham Studio" }],
+  validateSearch: (search) => ({
+    plan: (search.plan as string) || "portrait",
   }),
+
+  head: () => ({
+    meta: [
+      {
+        title:
+          "Book Your Session · Aambal Vasantham Studio",
+      },
+    ],
+  }),
+
   component: BookingConfirmed,
 });
+
 
 const PLANS = {
   portrait: {
@@ -631,20 +643,38 @@ ${bookingData.reference}
 }
 
 function BookingConfirmed() {
-  const search = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-  const planKey = (search.get("plan") ?? "portrait") as PlanKey;
-  const plan = { ...(PLANS[planKey] ?? PLANS.portrait), key: planKey };
+  const { plan: selectedPlan } =
+    Route.useSearch();
 
-  const [phaseIdx, setPhaseIdx] = useState(0);
+  const planKey =
+    (selectedPlan ?? "portrait") as PlanKey;
+
+  const plan = {
+    ...(PLANS[planKey] ?? PLANS.portrait),
+    key: planKey,
+  };
+
+  const [phaseIdx, setPhaseIdx] =
+    useState(0);
+
   const phases = plan.phases;
 
   useEffect(() => {
-    if (phaseIdx >= phases.length - 1) return;
-    const t = setTimeout(() => setPhaseIdx((i) => i + 1), 3200);
+    if (phaseIdx >= phases.length - 1)
+      return;
+
+    const t = setTimeout(
+      () => setPhaseIdx((i) => i + 1),
+      3200
+    );
+
     return () => clearTimeout(t);
   }, [phaseIdx, phases.length]);
 
-  const progress = (phaseIdx / (phases.length - 1)) * 100;
+  const progress =
+    (phaseIdx /
+      (phases.length - 1)) *
+    100;
 
   function renderPhase(phase: Phase) {
     switch (phase) {
