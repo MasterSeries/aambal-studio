@@ -1,10 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import RealtimeNotification from "@/components/RealtimeNotification";
-import { Link } from "@tanstack/react-router";
 import { GalleryUpload } from "@/components/GalleryUpload";
-import { RealCalendar } from "@/components/RealCalendar";
+import { RealCalendar } from "@/components/BookingComponents";
 import {
   collection, onSnapshot, query, orderBy, updateDoc, doc,
 } from "firebase/firestore";
@@ -16,105 +15,114 @@ import {
 } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import hero from "@/assets/hero-festival.jpg"; 
 
 export const Route = createFileRoute("/admin")({ component: AdminPage });
 
-// ── Tokens ────────────────────────────────────────────────────────────────────
-const T = {
-  gold: "#c8a84a",
-  goldLight: "#e8c97a",
-  goldDim: "rgba(200,168,74,0.15)",
-  ink: "#060910",
-  ink2: "#0b0f1a",
-  ink3: "#111827",
-  surface: "rgba(255,255,255,0.03)",
-  border: "rgba(255,255,255,0.07)",
-  borderGold: "rgba(200,168,74,0.2)",
-  text: "#f0ede6",
-  muted: "rgba(240,237,230,0.4)",
-  green: "#34d399",
-  red: "#f87171",
-  blue: "#60a5fa",
-  cyan: "#22d3ee",
-  amber: "#fbbf24",
+// ── Light Glassmorphism Tokens (Matching Bento Reference) ───────────────────
+const G = {
+  glassBg: "rgba(255, 255, 255, 0.45)",
+  glassBgStrong: "rgba(255, 255, 255, 0.65)",
+  glassBorder: "rgba(255, 255, 255, 0.8)",
+  darkBg: "rgba(40, 40, 42, 0.85)",
+  darkBorder: "rgba(60, 60, 65, 0.5)",
+  textMain: "#1a1a1c",
+  textMuted: "rgba(26, 26, 28, 0.5)",
+  textLight: "#ffffff",
+  textLightMuted: "rgba(255, 255, 255, 0.6)",
+  accentBlack: "#111111",
+  accentGrey: "#e5e5e5",
+  success: "#10b981",
+  danger: "#ef4444",
+  info: "#3b82f6",
+  warning: "#f59e0b",
 };
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
-  pending:     { bg: "rgba(251,191,36,.1)",  text: "#fbbf24", dot: "#fbbf24" },
-  approved:    { bg: "rgba(52,211,153,.1)",  text: "#34d399", dot: "#34d399" },
-  completed:   { bg: "rgba(96,165,250,.1)",  text: "#60a5fa", dot: "#60a5fa" },
-  rejected:    { bg: "rgba(248,113,113,.1)", text: "#f87171", dot: "#f87171" },
-  rescheduled: { bg: "rgba(34,211,238,.1)",  text: "#22d3ee", dot: "#22d3ee" },
+  pending:     { bg: "rgba(245,158,11,.15)",  text: "#d97706", dot: "#f59e0b" },
+  approved:    { bg: "rgba(16,185,129,.15)",  text: "#047857", dot: "#10b981" },
+  completed:   { bg: "rgba(59,130,246,.15)",  text: "#1d4ed8", dot: "#3b82f6" },
+  rejected:    { bg: "rgba(239,68,68,.15)",   text: "#b91c1c", dot: "#ef4444" },
+  rescheduled: { bg: "rgba(14,165,233,.15)",  text: "#0369a1", dot: "#0ea5e9" },
 };
 
-// ── Tiny helpers ──────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function StatusPill({ status }: { status: string }) {
   const c = STATUS_COLORS[status] ?? STATUS_COLORS.pending;
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 6,
       background: c.bg, color: c.text,
-      fontSize: 11, fontWeight: 600, letterSpacing: "0.1em",
-      textTransform: "uppercase", padding: "4px 12px", borderRadius: 100,
-      border: `1px solid ${c.dot}30`,
+      fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+      textTransform: "uppercase", padding: "4px 10px", borderRadius: 100,
     }}>
-      <span style={{ width: 5, height: 5, borderRadius: "50%", background: c.dot, flexShrink: 0 }} />
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot, flexShrink: 0 }} />
       {status}
     </span>
   );
 }
 
-function GlassCard({ children, className = "", style = {} }: {
-  children: React.ReactNode; className?: string; style?: React.CSSProperties;
-}) {
+function GlassPanel({ children, className = "", style = {} }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; }) {
   return (
     <div style={{
-      background: T.surface, border: `1px solid ${T.border}`,
-      borderRadius: 20, backdropFilter: "blur(20px)", ...style,
+      background: G.glassBg, border: `1px solid ${G.glassBorder}`,
+      borderRadius: 32, backdropFilter: "blur(40px)", WebkitBackdropFilter: "blur(40px)",
+      boxShadow: "0 24px 50px rgba(0,0,0,0.05), inset 0 2px 4px rgba(255,255,255,0.4)",
+      ...style,
     }} className={className}>
       {children}
     </div>
   );
 }
-<a
-  href="/media-manager"
-  className="rounded-2xl bg-pink-500 px-5 py-3 font-bold text-white"
->
-  Media Manager
-</a>
 
-
-function StatCard({ label, value, accent, icon, delay = 0 }: {
-  label: string; value: any; accent?: string; icon: string; delay?: number;
-}) {
-  const col = accent ?? T.gold;
+function DarkPanel({ children, className = "", style = {} }: { children: React.ReactNode; className?: string; style?: React.CSSProperties; }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay }}
-      style={{
-        background: `linear-gradient(140deg, ${col}10 0%, ${T.ink2} 100%)`,
-        border: `1px solid ${col}25`, borderRadius: 20,
-        padding: "1.5rem 1.75rem", position: "relative", overflow: "hidden",
-      }}
-    >
-      <div style={{ position: "absolute", top: 0, right: 0, width: 80, height: 80, background: `radial-gradient(circle at top right, ${col}18, transparent 70%)`, pointerEvents: "none" }} />
-      <div style={{ fontSize: 22, marginBottom: 12 }}>{icon}</div>
-      <div style={{ fontSize: "0.65rem", letterSpacing: "0.28em", textTransform: "uppercase", color: T.muted, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "2.6rem", fontWeight: 600, color: col, lineHeight: 1 }}>{value}</div>
-    </motion.div>
+    <div style={{
+      background: G.darkBg, border: `1px solid ${G.darkBorder}`,
+      borderRadius: 24, backdropFilter: "blur(20px)",
+      color: G.textLight, ...style,
+    }} className={className}>
+      {children}
+    </div>
   );
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const LightTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{ background: T.ink3, border: `1px solid ${T.borderGold}`, borderRadius: 12, padding: "10px 16px", fontFamily: "Raleway, sans-serif" }}>
-      <p style={{ color: T.muted, fontSize: 11, marginBottom: 4 }}>{label}</p>
-      <p style={{ color: T.gold, fontWeight: 700 }}>{payload[0].value}</p>
+    <div style={{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(10px)", border: `1px solid rgba(0,0,0,0.05)`, borderRadius: 16, padding: "12px 16px", boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}>
+      <p style={{ color: G.textMuted, fontSize: 11, marginBottom: 4, fontWeight: 500 }}>{label}</p>
+      <p style={{ color: G.textMain, fontWeight: 700, fontSize: 16 }}>{payload[0].value}</p>
     </div>
   );
 };
+
+const CircularProgress = ({ value, label, sublabel }: { value: number, label: string, sublabel?: string }) => {
+  const radius = 35;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (value / 100) * circumference;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+      <div style={{ position: "relative", width: 90, height: 90 }}>
+        <svg width="90" height="90" viewBox="0 0 90 90" style={{ transform: "rotate(-90deg)" }}>
+          <circle cx="45" cy="45" r={radius} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="8" />
+          <circle cx="45" cy="45" r={radius} fill="none" stroke={G.accentBlack} strokeWidth="8"
+            strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+            style={{ transition: "stroke-dashoffset 1s ease-in-out" }} />
+        </svg>
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ fontSize: 20, fontWeight: 600, color: G.textMain }}>{value}%</span>
+        </div>
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontSize: 11, fontWeight: 600, color: G.textMain }}>{label}</p>
+        {sublabel && <p style={{ fontSize: 9, color: G.textMuted, marginTop: 2 }}>{sublabel}</p>}
+      </div>
+    </div>
+  );
+};
+
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 function AdminPage() {
@@ -174,31 +182,76 @@ function AdminPage() {
   }
 
   function generateInvoice(booking: any) {
-    const docPdf = new jsPDF();
-    docPdf.setFontSize(28); docPdf.text("Booking Invoice", 20, 20);
-    docPdf.setFontSize(14);
-    [
-      [`Name: ${booking.name}`, 50], [`Email: ${booking.email}`, 65],
-      [`Phone: ${booking.phone}`, 80], [`Date: ${booking.date}`, 95],
-      [`Slots: ${booking.timeSlots?.join(", ") || booking.time}`, 110],
-      [`Package: ${booking.package}`, 125], [`Status: ${booking.status}`, 140],
-    ].forEach(([t, y]) => docPdf.text(t as string, 20, y as number));
-    docPdf.save(`${booking.name}-invoice.pdf`);
+    const pdf = new jsPDF();
+    pdf.setFillColor(17, 17, 17); 
+    pdf.rect(0, 0, 210, 40, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(24);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("STUDIO HUT", 20, 20);
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(200, 200, 200);
+    pdf.text("OFFICIAL BOOKING INVOICE", 20, 28);
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(12);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("CLIENT DETAILS", 20, 55);
+    pdf.setFont("helvetica", "normal");
+    pdf.text(`Name: ${booking.name}`, 20, 65);
+    pdf.text(`Email: ${booking.email}`, 20, 72);
+    pdf.text(`Phone: ${booking.phone}`, 20, 79);
+
+    autoTable(pdf, {
+      startY: 95,
+      theme: 'grid',
+      headStyles: { fillColor: [17, 17, 17], textColor: 255, fontStyle: 'bold' },
+      bodyStyles: { textColor: 50, fontSize: 10, cellPadding: 8 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      head: [["Service Detail", "Information"]],
+      body: [
+        ["Selected Package", booking.package || "Custom Session"],
+        ["Scheduled Date", booking.date || "TBD"],
+        ["Reserved Time Slot", booking.timeSlots?.join(", ") || booking.time || "TBD"],
+        ["Booking Status", (booking.status || "Pending").toUpperCase()],
+        ["Assigned Photographer", booking.photographer || "Pending Assignment"]
+      ]
+    });
+    pdf.save(`StudioHut_Invoice_${booking.name.replace(/\s+/g, '_')}.pdf`);
   }
 
   function downloadAnalyticsPDF() {
     const pdf = new jsPDF();
-    pdf.setFontSize(28); pdf.text("Analytics Report", 20, 25);
+    pdf.setFillColor(17, 17, 17); 
+    pdf.rect(0, 0, 210, 40, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(22);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("STUDIO HUT", 20, 22);
+    pdf.setFontSize(10);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(200, 200, 200);
+    pdf.text("OPERATIONAL ANALYTICS & DASHBOARD REPORT", 20, 30);
+    pdf.setTextColor(150, 150, 150);
+    pdf.text(`Generated: ${new Date().toLocaleString()}`, 130, 22);
+
     autoTable(pdf, {
-      startY: 50,
-      head: [["Metric", "Value"]],
+      startY: 55,
+      theme: 'grid',
+      headStyles: { fillColor: [17, 17, 17], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      bodyStyles: { textColor: 50, halign: 'center', fontSize: 11, cellPadding: 10 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      head: [["Metric", "Current Value"]],
       body: [
-        ["Total Bookings", totalBookings], ["Pending", pendingCount],
-        ["Approved", approvedCount], ["Completed", completedCount],
-        ["Today's Bookings", todayCount], ["Revenue", `₹${estimatedRevenue}`],
+        ["Total Bookings", totalBookings.toString()], 
+        ["Pending Actions", pendingCount.toString()],
+        ["Approved & Scheduled", approvedCount.toString()], 
+        ["Completed Shoots", completedCount.toString()],
+        ["Today's Activity", todayCount.toString()], 
+        ["Estimated Revenue", `Rs. ${estimatedRevenue}`],
       ],
     });
-    pdf.save("analytics-report.pdf");
+    pdf.save("StudioHut_Analytics_Report.pdf");
   }
 
   const totalBookings = bookings.length;
@@ -224,451 +277,381 @@ function AdminPage() {
   });
 
   if (loading) return (
-    <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", background: T.ink, flexDirection: "column", gap: 20 }}>
-      <style>{`@keyframes spinGold{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
-      <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px solid ${T.goldDim}`, borderTop: `2px solid ${T.gold}`, animation: "spinGold 1s linear infinite" }} />
-      <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.2rem", color: T.muted, letterSpacing: "0.2em" }}>Loading dashboard…</p>
+    <div style={{ display: "flex", minHeight: "100vh", alignItems: "center", justifyContent: "center", background: "#fdfdfd", flexDirection: "column", gap: 20 }}>
+      <div style={{ width: 48, height: 48, borderRadius: "50%", border: `3px solid rgba(0,0,0,0.05)`, borderTop: `3px solid #000`, animation: "spin 1s linear infinite" }} />
+      <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
     </div>
   );
 
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Raleway:wght@300;400;500;600&family=Cinzel:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
         *, *::before, *::after { box-sizing: border-box; }
-        body { background: ${T.ink}; color: ${T.text}; font-family: 'Raleway', sans-serif; }
-        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: ${T.ink}; } ::-webkit-scrollbar-thumb { background: ${T.gold}40; border-radius: 4px; }
-        input, select { outline: none; font-family: 'Raleway', sans-serif; color: ${T.text}; }
-        input::placeholder { color: ${T.muted}; }
-        button { font-family: 'Raleway', sans-serif; cursor: pointer; }
-        @keyframes fadeSlideUp { from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)} }
-        @keyframes shimmer { 0%{background-position:200% 0}100%{background-position:-200% 0} }
-        @keyframes pulseGlow { 0%,100%{opacity:.5}50%{opacity:1} }
-        .hover-lift { transition: transform 0.2s, box-shadow 0.2s; }
-        .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(200,168,74,0.08); }
-        .action-btn { display: flex; align-items: center; justify-content: center; gap: 7px; border: none; border-radius: 12px; padding: 11px 0; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s, transform 0.15s; width: 100%; }
-        .action-btn:hover { opacity: 0.88; transform: scale(0.98); }
-        .tab-btn { display: flex; align-items: center; gap: 7px; padding: 9px 18px; border-radius: 10px; border: none; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+        body { 
+          background: #eef2f6; 
+          color: ${G.textMain}; 
+          font-family: 'Outfit', sans-serif; 
+          overflow-x: hidden;
+          margin: 0;
+        }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        input, select { outline: none; font-family: 'Outfit', sans-serif; }
+        button { font-family: 'Outfit', sans-serif; cursor: pointer; border: none; }
+        
+        .floating-nav {
+          position: fixed; z-index: 100; background: ${G.darkBg}; backdrop-filter: blur(20px);
+          border: 1px solid ${G.darkBorder}; border-radius: 100px; display: flex;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+        .nav-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: white; border-radius: 50%; transition: 0.2s; }
+        .nav-icon:hover { background: rgba(255,255,255,0.1); }
+        .nav-icon.active { background: white; color: black; }
+
+        .glass-btn { background: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.8); color: ${G.textMain}; border-radius: 100px; padding: 10px 20px; font-weight: 600; font-size: 13px; transition: 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        .glass-btn:hover { background: #fff; transform: translateY(-1px); box-shadow: 0 8px 25px rgba(0,0,0,0.06); }
+        .dark-btn { background: ${G.accentBlack}; color: white; border-radius: 100px; padding: 10px 20px; font-weight: 600; font-size: 13px; transition: 0.2s; }
+        .dark-btn:hover { opacity: 0.85; }
+        
+        .bento-grid {
+          display: grid; grid-template-columns: 320px 1fr 340px; gap: 24px;
+          height: calc(100vh - 200px); min-height: 700px;
+        }
+        @media (max-width: 1200px) { .bento-grid { grid-template-columns: 1fr; height: auto; } }
+
+        /* Chart Customization */
+        .recharts-cartesian-axis-tick-value { fill: ${G.textMuted}; font-weight: 500; }
+        .recharts-cartesian-grid-horizontal line, .recharts-cartesian-grid-vertical line { stroke: rgba(0,0,0,0.04); }
+
+        /* ── CALENDAR OVERRIDES FOR HIGH-END UI ── */
+        .react-calendar { 
+          width: 100% !important; border: none !important; background: transparent !important; 
+          font-family: 'Outfit', sans-serif !important; color: #1a1a1c;
+        }
+        .react-calendar__navigation { margin-bottom: 1rem; }
+        .react-calendar__navigation button {
+          color: #1a1a1c; min-width: 44px; background: none; font-size: 16px; margin-top: 8px; font-weight: 600; border-radius: 12px; transition: 0.2s;
+        }
+        .react-calendar__navigation button:enabled:hover { background: rgba(0,0,0,0.05); }
+        .react-calendar__month-view__weekdays { text-transform: uppercase; font-weight: 700; font-size: 10px; color: rgba(26,26,28,0.4); padding: 12px 0; }
+        .react-calendar__month-view__weekdays__weekday abbr { text-decoration: none; }
+        .react-calendar__month-view__days__day {
+          padding: 14px !important; font-weight: 500; font-size: 14px; border-radius: 16px; transition: 0.2s; border: 2px solid transparent !important;
+        }
+        .react-calendar__month-view__days__day:hover { background: rgba(0,0,0,0.04); transform: scale(0.95); }
+        .react-calendar__tile--active { background: #111111 !important; color: white !important; box-shadow: 0 8px 20px rgba(0,0,0,0.15); border-radius: 16px; transform: scale(1.05); }
+        .react-calendar__tile--now { background: rgba(0,0,0,0.05) !important; color: #111 !important; border-radius: 16px; font-weight: 700; }
       `}</style>
 
-      {/* ── PAGE SHELL ── */}
-      <div style={{ minHeight: "100vh", background: T.ink, position: "relative" }}>
+      {/* ── BACKGROUND LAYER ── */}
+      <div style={{ position: "fixed", inset: 0, zIndex: -1 }}>
+        {/* Using the hero image heavily blurred and brightened to create the glassmorphism environment */}
+        <img src={hero} alt="bg" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(90px) brightness(1.4) saturate(1.2)", transform: "scale(1.1)" }} />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%)" }} />
+      </div>
 
-        {/* grain texture */}
-        <div style={{ position: "fixed", inset: 0, opacity: 0.025, backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")", backgroundSize: "180px", pointerEvents: "none", zIndex: 0 }} />
+      <RealtimeNotification />
 
-        {/* ambient glow */}
-        <div style={{ position: "fixed", top: "-20%", left: "50%", transform: "translateX(-50%)", width: 700, height: 400, background: `radial-gradient(ellipse, ${T.gold}07 0%, transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
+      {/* ── FLOATING NAVIGATION (LEFT) ── */}
+      <div className="floating-nav" style={{ left: 24, top: "50%", transform: "translateY(-50%)", flexDirection: "column", padding: 8, gap: 8 }}>
+        <button className={`nav-icon ${activeSection === 'bookings' ? 'active' : ''}`} onClick={() => setActiveSection("bookings")}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        </button>
+        <button className={`nav-icon ${activeSection === 'calendar' ? 'active' : ''}`} onClick={() => setActiveSection("calendar")}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </button>
+        <button className={`nav-icon ${activeSection === 'gallery' ? 'active' : ''}`} onClick={() => setActiveSection("gallery")}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+        </button>
+        <div style={{ width: "100%", height: 1, background: "rgba(255,255,255,0.1)", margin: "4px 0" }} />
+        <button className="nav-icon" onClick={downloadAnalyticsPDF} title="Download Analytics PDF">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        </button>
+      </div>
 
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 1400, margin: "0 auto", padding: "2rem 1.5rem 4rem" }}>
-          <RealtimeNotification />
-
-          {/* ══════════════ HEADER ══════════════ */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 20, marginBottom: "3rem" }}>
-
-            <div>
-              <p style={{ fontSize: "0.6rem", letterSpacing: "0.4em", textTransform: "uppercase", color: T.gold, marginBottom: 8, opacity: 0.8 }}>Aambal Vasantham Studio</p>
-              <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 500, color: T.text, margin: 0, lineHeight: 1.1 }}>
-                Admin Dashboard
-              </h1>
-              <p style={{ marginTop: 6, color: T.muted, fontSize: "0.85rem" }}>Booking management & analytics</p>
-            </div>
-
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-              {[
-  {
-    label: "Analytics PDF",
-
-    icon: "⬇",
-
-    onClick:
-      downloadAnalyticsPDF,
-
-    color: T.gold,
-  },
-
-  {
-    label:
-      "Manage Shoots",
-
-    icon: "🎬",
-
-    to:
-      "/shoot-manager",
-
-    color:
-      "#a78bfa",
-  },
-
-  {
-    label:
-      "Shoot Details",
-
-    icon: "📋",
-
-    to:
-      "/shoot-details",
-
-    color:
-      T.cyan,
-  },
-
-  {
-    label:
-      "Media Manager",
-
-    icon: "🖼",
-
-    to:
-      "/media-manager",
-
-    color:
-      "#ec4899",
-  },
-
-  
-  {
-  label:
-    "Package CMS",
-
-  icon: "💎",
-
-  to:
-    "/package-editor",
-
-  color:
-    "#f59e0b",
-},
-{
-  label:
-    "Homestay Editor",
-
-  icon:
-    "🏡",
-
-  to:
-    "/homestay-editor",
-
-  color:
-    "#22c55e",
-},
-
-              ].map((btn) =>
-                btn.to ? (
-                  <Link key={btn.label} to={btn.to}>
-                    <button style={{ display: "flex", alignItems: "center", gap: 8, background: `${btn.color}15`, border: `1px solid ${btn.color}30`, color: btn.color, borderRadius: 12, padding: "10px 18px", fontSize: 13, fontWeight: 600, letterSpacing: "0.06em", cursor: "pointer", transition: "all 0.2s" }}>
-                      <span>{btn.icon}</span> {btn.label}
-                    </button>
-                  </Link>
-                ) : (
-                  <button key={btn.label} onClick={btn.onClick} style={{ display: "flex", alignItems: "center", gap: 8, background: `${btn.color}15`, border: `1px solid ${btn.color}30`, color: btn.color, borderRadius: 12, padding: "10px 18px", fontSize: 13, fontWeight: 600, letterSpacing: "0.06em", cursor: "pointer", transition: "all 0.2s" }}>
-                    <span>{btn.icon}</span> {btn.label}
-                  </button>
-                )
-              )}
-            </div>
-          </motion.div>
-
-          {/* ══════════════ STAT CARDS ══════════════ */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem", marginBottom: "2.5rem" }}>
-            <StatCard label="Total" value={totalBookings}  icon="📁" accent={T.gold}  delay={0} />
-            <StatCard label="Pending" value={pendingCount}   icon="⏳" accent={T.amber} delay={0.08} />
-            <StatCard label="Approved" value={approvedCount} icon="✓"  accent={T.green} delay={0.12} />
-            <StatCard label="Completed" value={completedCount} icon="🎞" accent={T.blue}  delay={0.16} />
-            <StatCard label="Today" value={todayCount}       icon="📅" accent={T.cyan}  delay={0.2} />
-            <StatCard label="Revenue" value={`₹${(estimatedRevenue/1000).toFixed(0)}k`} icon="₹" accent={T.goldLight} delay={0.24} />
-          </div>
-
-          {/* ══════════════ CHARTS ══════════════ */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.25 }}
-            style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "1.25rem", marginBottom: "2.5rem" }}>
-
-            <GlassCard style={{ padding: "1.75rem" }}>
-              <p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.7rem", letterSpacing: "0.25em", color: T.gold, textTransform: "uppercase", marginBottom: "1.5rem" }}>Booking Trend</p>
-              <div style={{ height: 200 }}>
-                <ResponsiveContainer>
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="goldGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={T.gold} stopOpacity={0.2} />
-                        <stop offset="95%" stopColor={T.gold} stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                    <XAxis dataKey="name" stroke={T.muted} tick={{ fontSize: 11, fontFamily: "Raleway" }} />
-                    <YAxis stroke={T.muted} tick={{ fontSize: 11, fontFamily: "Raleway" }} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="value" stroke={T.gold} strokeWidth={2.5} fill="url(#goldGrad)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </GlassCard>
-
-            <GlassCard style={{ padding: "1.75rem" }}>
-              <p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.7rem", letterSpacing: "0.25em", color: T.gold, textTransform: "uppercase", marginBottom: "1.5rem" }}>Status Overview</p>
-              <div style={{ height: 200 }}>
-                <ResponsiveContainer>
-                  <BarChart data={chartData} barSize={28}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                    <XAxis dataKey="name" stroke={T.muted} tick={{ fontSize: 11, fontFamily: "Raleway" }} />
-                    <YAxis stroke={T.muted} tick={{ fontSize: 11, fontFamily: "Raleway" }} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="value" radius={[6, 6, 0, 0]}
-                      fill="url(#barGrad)"
-                    />
-                    <defs>
-                      <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={T.gold} />
-                        <stop offset="100%" stopColor="#8a6a20" />
-                      </linearGradient>
-                    </defs>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </GlassCard>
-          </motion.div>
-
-          {/* ══════════════ SECTION TABS ══════════════ */}
-          <div style={{ display: "flex", gap: 8, marginBottom: "2rem", padding: "6px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, width: "fit-content" }}>
-            {(["bookings", "calendar", "gallery"] as const).map(tab => (
-              <button key={tab} className="tab-btn"
-                onClick={() => setActiveSection(tab)}
-                style={{
-                  background: activeSection === tab ? `${T.gold}18` : "transparent",
-                  border: activeSection === tab ? `1px solid ${T.gold}35` : "1px solid transparent",
-                  color: activeSection === tab ? T.gold : T.muted,
-                }}>
-                {tab === "bookings" ? "📋" : tab === "calendar" ? "📅" : "🖼"}{" "}
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            ))}
-          </div>
-
-          <AnimatePresence mode="wait">
-
-            {/* ══════════════ BOOKINGS TAB ══════════════ */}
-            {activeSection === "bookings" && (
-              <motion.div key="bookings" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-
-                {/* Search + filter bar */}
-                <GlassCard style={{ padding: "1.25rem 1.5rem", marginBottom: "1.5rem" }}>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-                    <div style={{ flex: 1, minWidth: 220, position: "relative" }}>
-                      <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: T.muted, fontSize: 14 }}>🔍</span>
-                      <input value={search} onChange={e => setSearch(e.target.value)}
-                        placeholder="Search by name or email…"
-                        style={{ width: "100%", background: "rgba(0,0,0,0.3)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 14px 10px 38px", fontSize: 13, color: T.text, transition: "border-color 0.2s" }}
-                      />
-                    </div>
-                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-                      style={{ background: "rgba(0,0,0,0.4)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "10px 14px", fontSize: 13, color: T.text, minWidth: 140 }}>
-                      {["all","pending","approved","completed","rejected","rescheduled"].map(s => (
-                        <option key={s} value={s}>{s.charAt(0).toUpperCase()+s.slice(1)}</option>
-                      ))}
-                    </select>
-                    <div style={{ background: `${T.gold}18`, border: `1px solid ${T.gold}30`, borderRadius: 12, padding: "10px 18px", fontSize: 12, color: T.gold, fontWeight: 600, letterSpacing: "0.1em", whiteSpace: "nowrap" }}>
-                      {filteredBookings.length} {filteredBookings.length === 1 ? "result" : "results"}
-                    </div>
-                  </div>
-                </GlassCard>
-
-                {filteredBookings.length === 0 && (
-                  <GlassCard style={{ padding: "4rem", textAlign: "center" }}>
-                    <p style={{ fontSize: "2rem", marginBottom: 12 }}>🔎</p>
-                    <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.5rem", color: T.muted }}>No bookings found</p>
-                    <p style={{ fontSize: "0.85rem", color: T.muted, opacity: 0.6, marginTop: 6 }}>Try adjusting your search or filter</p>
-                  </GlassCard>
-                )}
-
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {filteredBookings.map((booking, idx) => {
-                    const isExpanded = expandedId === booking.id;
-                    return (
-                      <motion.div key={booking.id}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.35, delay: idx * 0.04 }}
-                        className="hover-lift"
-                        style={{
-                          background: `linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.02) 100%)`,
-                          border: `1px solid ${isExpanded ? T.gold + "35" : T.border}`,
-                          borderRadius: 20, overflow: "hidden",
-                          transition: "border-color 0.25s",
-                        }}
-                      >
-                        {/* ── Card header row ── */}
-                        <div
-                          style={{ padding: "1.25rem 1.5rem", cursor: "pointer", display: "flex", alignItems: "center", flexWrap: "wrap", gap: 16 }}
-                          onClick={() => setExpandedId(isExpanded ? null : booking.id)}
-                        >
-                          {/* avatar */}
-                          <div style={{ width: 44, height: 44, borderRadius: "50%", background: `${T.gold}18`, border: `1.5px solid ${T.gold}30`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cinzel', serif", fontSize: "1.1rem", color: T.gold, flexShrink: 0 }}>
-                            {(booking.name || "?")[0].toUpperCase()}
-                          </div>
-
-                          <div style={{ flex: 1, minWidth: 160 }}>
-                            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.25rem", color: T.text, fontWeight: 600, margin: 0 }}>{booking.name}</p>
-                            <p style={{ fontSize: 12, color: T.muted, marginTop: 2 }}>{booking.email}</p>
-                          </div>
-
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-                            <StatusPill status={booking.status || "pending"} />
-                            <span style={{ fontSize: 11, color: T.muted, background: "rgba(255,255,255,0.05)", padding: "4px 10px", borderRadius: 8, letterSpacing: "0.05em" }}>
-                              {booking.date}
-                            </span>
-                            {booking.package && (
-                              <span style={{ fontSize: 11, color: T.goldLight, background: `${T.gold}10`, border: `1px solid ${T.gold}20`, padding: "4px 10px", borderRadius: 8 }}>
-                                {booking.package}
-                              </span>
-                            )}
-                          </div>
-
-                          <div style={{ color: T.muted, fontSize: 16, transition: "transform 0.25s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>⌄</div>
-                        </div>
-
-                        {/* ── Expanded content ── */}
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.3 }}
-                              style={{ overflow: "hidden" }}
-                            >
-                              <div style={{ borderTop: `1px solid ${T.border}`, padding: "1.5rem" }}>
-                                <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1.5rem", flexWrap: "wrap" }}>
-
-                                  {/* ── Info grid ── */}
-                                  <div>
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
-                                      {[
-                                        { label: "Phone", value: booking.phone },
-                                        { label: "Time Slots", value: booking.timeSlots?.join(", ") || booking.time },
-                                        { label: "Package", value: booking.package },
-                                        { label: "Photographer", value: booking.photographer || "Unassigned" },
-                                      ].map(({ label, value }) => (
-                                        <div key={label} style={{ background: "rgba(0,0,0,0.25)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "12px 14px" }}>
-                                          <p style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: T.muted, marginBottom: 5 }}>{label}</p>
-                                          <p style={{ fontSize: 14, color: T.text, fontWeight: 500, wordBreak: "break-all" }}>{value || "—"}</p>
-                                        </div>
-                                      ))}
-                                    </div>
-
-                                    {/* Photographer assign */}
-                                    <div style={{ display: "flex", gap: 8 }}>
-                                      <input
-                                        placeholder="Assign photographer…"
-                                        value={photographerInputs[booking.id] || ""}
-                                        onChange={e => setPhotographerInputs({ ...photographerInputs, [booking.id]: e.target.value })}
-                                        style={{ flex: 1, background: "rgba(0,0,0,0.3)", border: `1px solid ${T.border}`, borderRadius: 10, padding: "9px 14px", fontSize: 13, color: T.text }}
-                                      />
-                                      <button onClick={() => assignPhotographer(booking.id)}
-                                        style={{ background: `#a78bfa20`, border: "1px solid #a78bfa30", color: "#a78bfa", borderRadius: 10, padding: "9px 16px", fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", cursor: "pointer" }}>
-                                        Assign
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* ── Action buttons ── */}
-                                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", width: 240, alignContent: "start" }}>
-                                    {[
-                                      { label: "Approve",    fn: () => updateStatus(booking.id, "approved"),    bg: "#22c55e", col: "#fff" },
-                                      { label: "Reject",     fn: () => updateStatus(booking.id, "rejected"),    bg: "#ef4444", col: "#fff" },
-                                      { label: "Complete",   fn: () => updateStatus(booking.id, "completed"),   bg: "#3b82f6", col: "#fff" },
-                                      { label: "Reschedule", fn: () => openReschedule(booking),                 bg: T.cyan,    col: T.ink },
-                                      { label: "Invoice",    fn: () => generateInvoice(booking),                bg: T.gold,    col: T.ink },
-                                    ].map(a => (
-                                      <button key={a.label} onClick={a.fn} className="action-btn"
-                                        style={{ background: `${a.bg}18`, border: `1px solid ${a.bg}35`, color: a.col === T.ink ? a.bg : "#fff", gridColumn: a.label === "Invoice" ? "span 2" : undefined }}>
-                                        {a.label}
-                                      </button>
-                                    ))}
-                                  </div>
-
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-
-            {/* ══════════════ CALENDAR TAB ══════════════ */}
-            {activeSection === "calendar" && (
-              <motion.div key="calendar" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-                <GlassCard style={{ padding: "1.75rem" }}>
-                  <p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.7rem", letterSpacing: "0.25em", color: T.gold, textTransform: "uppercase", marginBottom: "1.5rem" }}>Booking Calendar</p>
-                  <div style={{ height: 640, overflow: "hidden", borderRadius: 16, background: "#fff" }}>
-                    <RealCalendar />
-                  </div>
-                </GlassCard>
-              </motion.div>
-            )}
-
-            {/* ══════════════ GALLERY TAB ══════════════ */}
-            {activeSection === "gallery" && (
-              <motion.div key="gallery" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-                <GlassCard style={{ padding: "1.75rem" }}>
-                  <p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.7rem", letterSpacing: "0.25em", color: T.gold, textTransform: "uppercase", marginBottom: "1.5rem" }}>Gallery Upload</p>
-                  <GalleryUpload />
-                </GlassCard>
-              </motion.div>
-            )}
-          </AnimatePresence>
+      {/* ── FLOATING NAVIGATION (BOTTOM - ALL BUTTONS) ── */}
+      <div className="floating-nav" style={{ bottom: 32, left: "50%", transform: "translateX(-50%)", padding: "6px 6px", alignItems: "center", maxWidth: "90vw", overflowX: "auto" }}>
+        <div style={{ display: "flex", gap: 4, whiteSpace: "nowrap" }}>
+          <Link to="/shoot-manager"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>🎬 Shoots</button></Link>
+          <Link to="/media-manager"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>🖼 Media</button></Link>
+          <Link to="/package-editor"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>💎 Packages</button></Link>
+          <Link to="/homestay-editor"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>🏡 Homestay</button></Link>
+          <Link to="/admin-enquiries"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>📩 Enquiries</button></Link>
+          <Link to="/hero-editor"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>✨ Hero Editor</button></Link>
+          <Link to="/enquiry-editor"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>✏️ Page Editor</button></Link>
         </div>
       </div>
 
-      {/* ══════════════ RESCHEDULE MODAL ══════════════ */}
+      {/* ── MAIN CONTENT AREA ── */}
+      <div style={{ padding: "3rem 6rem 8rem 6rem", maxWidth: 1800, margin: "0 auto", position: "relative", zIndex: 10 }}>
+        
+        {/* Top Header Text */}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: "2.5rem" }}>
+          <h1 style={{ fontSize: "5rem", fontWeight: 300, color: G.textMain, letterSpacing: "-0.02em", margin: 0 }}>
+            Dashboard
+          </h1>
+        </div>
+
+        {/* ── BENTO GRID CONTAINER ── */}
+        <GlassPanel className="bento-grid" style={{ padding: "24px" }}>
+          
+          {/* ── COLUMN 1 (Left) ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            
+            {/* Dark Profile / System Status Card */}
+            <DarkPanel style={{ padding: 24, flex: 1, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, background: "radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)", borderRadius: "50%" }}></div>
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Studio Hut Ops</h3>
+              <p style={{ fontSize: 11, color: G.textLightMuted }}>Welcome back, Rayaan</p>
+              
+              <div style={{ marginTop: "auto", display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+                 <div style={{ width: 80, height: 80, borderRadius: "50%", background: "linear-gradient(135deg, #444, #111)", border: "1px solid #555", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 10px 20px rgba(0,0,0,0.5)" }}>
+                    <span style={{ fontSize: 32 }}>📸</span>
+                 </div>
+                 <div style={{ textAlign: "right" }}>
+                    <p style={{ fontSize: 10, color: G.textLightMuted, textTransform: "uppercase", letterSpacing: "0.1em" }}>Revenue</p>
+                    <p style={{ fontSize: 28, fontWeight: 300, lineHeight: 1 }}>₹{(estimatedRevenue/1000).toFixed(0)}k</p>
+                 </div>
+              </div>
+            </DarkPanel>
+
+            {/* Line Chart Card (Orders over time) */}
+            <GlassPanel style={{ padding: 24, flex: 1.2, background: "rgba(255,255,255,0.3)" }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>Booking Volume</h3>
+              <p style={{ fontSize: 11, color: G.textMuted, marginBottom: 20 }}>Frequency by status</p>
+              <div style={{ height: 160, width: "100%", marginLeft: -15 }}>
+                <ResponsiveContainer>
+                  <LineChart data={chartData}>
+                    <Tooltip content={<LightTooltip />} />
+                    <Line type="monotone" dataKey="value" stroke={G.accentBlack} strokeWidth={3} dot={{ r: 4, fill: G.accentBlack }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </GlassPanel>
+          </div>
+
+          {/* ── COLUMN 2 (Center) ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            
+            {/* Top Bar Chart (Weekly/Status Activity) */}
+            <GlassPanel style={{ padding: 24, height: 180, display: "flex", flexDirection: "column", background: "rgba(255,255,255,0.5)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div>
+                  <h3 style={{ fontSize: 15, fontWeight: 600 }}>Active Workload</h3>
+                  <p style={{ fontSize: 11, color: G.textMuted }}>Bookings & processing</p>
+                </div>
+                <div style={{ fontSize: 32, fontWeight: 300, lineHeight: 1 }}>{pendingCount + approvedCount}<span style={{ fontSize: 16, color: G.textMuted }}> tasks</span></div>
+              </div>
+              <div style={{ flex: 1, width: "100%" }}>
+                <ResponsiveContainer>
+                  <BarChart data={chartData} barSize={12}>
+                    <Tooltip content={<LightTooltip />} cursor={{ fill: "rgba(0,0,0,0.02)" }} />
+                    <Bar dataKey="value" radius={[10, 10, 10, 10]} fill={G.accentBlack} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </GlassPanel>
+
+            {/* Central Dynamic Content Area (Bookings / Calendar / Gallery) */}
+            <GlassPanel style={{ padding: "8px", flex: 1, display: "flex", flexDirection: "column", background: "rgba(255,255,255,0.7)" }}>
+               <div style={{ padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid rgba(0,0,0,0.05)` }}>
+                 <h3 style={{ fontSize: 18, fontWeight: 600, textTransform: "capitalize" }}>{activeSection}</h3>
+                 
+                 {/* Quick Search/Filter for Bookings */}
+                 {activeSection === "bookings" && (
+                   <div style={{ display: "flex", gap: 8 }}>
+                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
+                        style={{ background: "rgba(255,255,255,0.5)", border: "none", borderRadius: 100, padding: "6px 14px", fontSize: 12, width: 140 }} />
+                     <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                        style={{ background: "rgba(255,255,255,0.5)", border: "none", borderRadius: 100, padding: "6px 14px", fontSize: 12 }}>
+                        {["all","pending","approved","completed","rejected","rescheduled"].map(s => <option key={s} value={s}>{s}</option>)}
+                     </select>
+                   </div>
+                 )}
+               </div>
+
+               <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
+                 <AnimatePresence mode="wait">
+                    
+                    {/* BOOKINGS LIST (Bento Card Style) */}
+                    {activeSection === "bookings" && (
+                      <motion.div key="b" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {filteredBookings.length === 0 ? (
+                          <div style={{ textAlign: "center", padding: "40px 20px", color: G.textMuted }}>No bookings found.</div>
+                        ) : (
+                          filteredBookings.map((booking) => {
+                            const isExpanded = expandedId === booking.id;
+                            return (
+                              <div key={booking.id} style={{ background: "rgba(255,255,255,0.6)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.8)", overflow: "hidden", transition: "0.2s", boxShadow: isExpanded ? "0 10px 20px rgba(0,0,0,0.03)" : "none" }}>
+                                <div onClick={() => setExpandedId(isExpanded ? null : booking.id)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                                  <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 600 }}>{booking.date || "No Date"}</span>
+                                    <span style={{ width: 1, height: 12, background: "rgba(0,0,0,0.1)" }}></span>
+                                    <span style={{ fontSize: 14, fontWeight: 500 }}>{booking.name}</span>
+                                  </div>
+                                  <StatusPill status={booking.status || "pending"} />
+                                </div>
+
+                                {isExpanded && (
+                                  <div style={{ padding: "0 16px 16px 16px", borderTop: "1px solid rgba(0,0,0,0.04)", paddingTop: 12 }}>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                                      <div><p style={{ fontSize: 10, color: G.textMuted }}>Package</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.package}</p></div>
+                                      <div><p style={{ fontSize: 10, color: G.textMuted }}>Contact</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.phone}</p></div>
+                                      <div><p style={{ fontSize: 10, color: G.textMuted }}>Time</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.timeSlots?.join(", ") || booking.time}</p></div>
+                                      
+                                      <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                                        <div style={{ flex: 1 }}>
+                                          <p style={{ fontSize: 10, color: G.textMuted }}>Photographer</p>
+                                          <input value={photographerInputs[booking.id] || ""} onChange={e => setPhotographerInputs({ ...photographerInputs, [booking.id]: e.target.value })} placeholder={booking.photographer || "Assign..."} style={{ width: "100%", background: "rgba(0,0,0,0.03)", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 12 }} />
+                                        </div>
+                                        <button onClick={() => assignPhotographer(booking.id)} className="dark-btn" style={{ padding: "4px 10px", fontSize: 11 }}>Save</button>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                      <button onClick={() => updateStatus(booking.id, "approved")} className="glass-btn" style={{ borderColor: G.success, color: G.success }}>Approve</button>
+                                      <button onClick={() => updateStatus(booking.id, "completed")} className="glass-btn" style={{ borderColor: G.info, color: G.info }}>Complete</button>
+                                      <button onClick={() => updateStatus(booking.id, "rejected")} className="glass-btn" style={{ borderColor: G.danger, color: G.danger }}>Reject</button>
+                                      <button onClick={() => openReschedule(booking)} className="glass-btn">Reschedule</button>
+                                      <button onClick={() => generateInvoice(booking)} className="dark-btn" style={{ marginLeft: "auto" }}>Invoice</button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </motion.div>
+                    )}
+
+                    {/* CALENDAR */}
+                    {activeSection === "calendar" && (
+                      <motion.div key="c" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ height: "100%", minHeight: 400 }}>
+                        <RealCalendar />
+                      </motion.div>
+                    )}
+
+                    {/* GALLERY */}
+                    {activeSection === "gallery" && (
+                      <motion.div key="g" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <GalleryUpload />
+                      </motion.div>
+                    )}
+                 </AnimatePresence>
+               </div>
+            </GlassPanel>
+
+          </div>
+
+          {/* ── COLUMN 3 (Right) ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            
+            {/* Top Right Circles */}
+            <GlassPanel style={{ padding: "24px", display: "flex", justifyContent: "space-around", alignItems: "center", background: "rgba(255,255,255,0.4)" }}>
+              <CircularProgress value={Math.round((completedCount / (totalBookings || 1)) * 100)} label="Completed" sublabel="Tasks Done" />
+              <div style={{ width: 1, height: 60, background: "rgba(0,0,0,0.05)" }}></div>
+              <CircularProgress value={Math.round((pendingCount / (totalBookings || 1)) * 100)} label="Pending" sublabel="In Pipeline" />
+            </GlassPanel>
+
+            {/* Quick Stats Black Pills */}
+            <GlassPanel style={{ padding: 24, background: "rgba(255,255,255,0.35)" }}>
+               <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 16 }}>Operational Analytics</h3>
+               <div style={{ display: "flex", gap: 10, justifyContent: "space-between" }}>
+                 {[
+                   { val: totalBookings, label: "Total" },
+                   { val: todayCount, label: "Today" },
+                   { val: approvedCount, label: "Active" }
+                 ].map(stat => (
+                   <div key={stat.label} style={{ background: G.accentBlack, color: "white", borderRadius: 100, padding: "16px 12px", display: "flex", flexDirection: "column", alignItems: "center", flex: 1, boxShadow: "0 10px 20px rgba(0,0,0,0.1)" }}>
+                     <span style={{ fontSize: 18, fontWeight: 600 }}>{stat.val}</span>
+                     <span style={{ fontSize: 9, opacity: 0.6, marginTop: 4, textTransform: "uppercase" }}>{stat.label}</span>
+                   </div>
+                 ))}
+               </div>
+            </GlassPanel>
+
+            {/* Project Settings / Status Breakdown */}
+            <DarkPanel style={{ padding: 24, flex: 1 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 20 }}>Pipeline Status</h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {[
+                  { label: "Pending Review", value: pendingCount, col: G.warning },
+                  { label: "Approved & Scheduled", value: approvedCount, col: G.success },
+                  { label: "Completed Deliveries", value: completedCount, col: G.info },
+                ].map(s => {
+                  const pct = Math.round((s.value / (totalBookings || 1)) * 100);
+                  return (
+                    <div key={s.label}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: G.textLightMuted, marginBottom: 6 }}>
+                        <span>{s.label}</span>
+                        <span>{pct}%</span>
+                      </div>
+                      <div style={{ width: "100%", height: 4, background: "rgba(255,255,255,0.1)", borderRadius: 4 }}>
+                        <div style={{ width: `${pct}%`, height: "100%", background: s.col, borderRadius: 4 }}></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Bottom Area chart placeholder in dark panel */}
+               <div style={{ marginTop: "auto", paddingTop: 20 }}>
+                 <p style={{ fontSize: 11, color: G.textLightMuted, marginBottom: 8 }}>Weekly Spread</p>
+                 <div style={{ height: 60 }}>
+                   <ResponsiveContainer>
+                    <AreaChart data={chartData}>
+                      <Area type="monotone" dataKey="value" stroke={G.textLight} strokeWidth={2} fill="rgba(255,255,255,0.1)" />
+                    </AreaChart>
+                   </ResponsiveContainer>
+                 </div>
+               </div>
+            </DarkPanel>
+          </div>
+        </GlassPanel>
+
+      </div>
+
+      {/* ══════════════ RESCHEDULE MODAL (Glass Styled) ══════════════ */}
       <AnimatePresence>
         {selectedBooking && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setSelectedBooking(null)}
-            style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(14px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
+            style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}
           >
             <motion.div
-              initial={{ scale: 0.88, y: 30, opacity: 0 }}
+              initial={{ scale: 0.95, y: 20, opacity: 0 }}
               animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.92, opacity: 0 }}
-              transition={{ type: "spring", damping: 22, stiffness: 280 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
               onClick={e => e.stopPropagation()}
-              style={{ width: "100%", maxWidth: 440, background: T.ink3, border: `1px solid ${T.gold}30`, borderRadius: 24, padding: "2rem", boxShadow: `0 0 60px ${T.gold}12, 0 40px 80px rgba(0,0,0,0.7)` }}
+              style={{ width: "100%", maxWidth: 400, background: "rgba(255,255,255,0.85)", backdropFilter: "blur(40px)", border: `1px solid rgba(255,255,255,0.5)`, borderRadius: 32, padding: "32px", boxShadow: `0 30px 60px rgba(0,0,0,0.12)` }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.75rem" }}>
-                <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "1.2rem", color: T.goldLight, margin: 0 }}>Reschedule Booking</h2>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem" }}>
+                <h2 style={{ fontSize: 20, fontWeight: 600, color: G.textMain, margin: 0 }}>Reschedule</h2>
                 <button onClick={() => setSelectedBooking(null)}
-                  style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${T.border}`, color: T.muted, borderRadius: "50%", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 14 }}>✕</button>
+                  style={{ background: "rgba(0,0,0,0.05)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>✕</button>
               </div>
-              <p style={{ fontSize: 13, color: T.muted, marginBottom: "1.5rem" }}>
-                Rescheduling for <strong style={{ color: T.text }}>{selectedBooking.name}</strong>
+              <p style={{ fontSize: 13, color: G.textMuted, marginBottom: "1.5rem" }}>
+                Updating slot for <strong style={{ color: G.textMain }}>{selectedBooking.name}</strong>
               </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 {[
                   { label: "New Date", value: newDate, onChange: setNewDate, placeholder: "e.g. 15 August 2026" },
                   { label: "New Time Slot", value: newSlot, onChange: setNewSlot, placeholder: "e.g. 6:00 PM – 7:00 PM" },
                 ].map(({ label, value, onChange, placeholder }) => (
                   <div key={label}>
-                    <p style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: T.muted, marginBottom: 6 }}>{label}</p>
+                    <p style={{ fontSize: 11, fontWeight: 600, color: G.textMain, marginBottom: 6 }}>{label}</p>
                     <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-                      style={{ width: "100%", background: "rgba(0,0,0,0.35)", border: `1px solid ${T.border}`, borderRadius: 12, padding: "11px 14px", fontSize: 13, color: T.text }}
+                      style={{ width: "100%", background: "rgba(255,255,255,0.5)", border: `1px solid rgba(0,0,0,0.1)`, borderRadius: 16, padding: "14px 16px", fontSize: 14, color: G.textMain }}
                     />
                   </div>
                 ))}
-                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                  <button onClick={saveReschedule}
-                    style={{ flex: 1, background: `${T.gold}20`, border: `1px solid ${T.gold}40`, color: T.gold, borderRadius: 12, padding: "12px", fontWeight: 600, letterSpacing: "0.08em", fontSize: 13, cursor: "pointer" }}>
-                    Save Changes
-                  </button>
-                  <button onClick={() => setSelectedBooking(null)}
-                    style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, color: T.muted, borderRadius: 12, padding: "12px", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>
-                    Cancel
-                  </button>
+                <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+                  <button onClick={() => setSelectedBooking(null)} className="glass-btn" style={{ flex: 1, padding: "14px", border: "none", background: "rgba(0,0,0,0.05)" }}>Cancel</button>
+                  <button onClick={saveReschedule} className="dark-btn" style={{ flex: 1.5, padding: "14px" }}>Confirm Update</button>
                 </div>
               </div>
             </motion.div>

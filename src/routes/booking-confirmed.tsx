@@ -1,745 +1,462 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { BookingForm } from "@/components/BookingForm";
-import {
-  sendWhatsAppMessage,
-} from "@/lib/sendWhatsapp";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { doc, getDoc, collection, query, where, onSnapshot, addDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { sendWhatsAppMessage } from "@/lib/sendWhatsapp";
 
 export const Route = createFileRoute("/booking-confirmed")({
-  validateSearch: (search) => ({
-    plan: (search.plan as string) || "portrait",
+  validateSearch: (search: Record<string, unknown>) => ({
+    plan: (search.plan as string) || undefined,
   }),
-
-  head: () => ({
-    meta: [
-      {
-        title:
-          "Book Your Session · Aambal Vasantham Studio",
-      },
-    ],
-  }),
-
-  component: BookingConfirmed,
+  component: MainBookingApp,
 });
 
-
-const PLANS = {
-  portrait: {
-    name: "Festival Portrait",
-    tagline: "Intimate. Timeless.",
-    price: "₹4,999",
-    duration: "1 Hour",
-    includes: ["photography"],
-    color: "#c89a30",
-    accent: "#e8c97a",
-    bg: "radial-gradient(ellipse at 60% 20%, #1a0f00 0%, #04080f 70%)",
-    phases: ["camera", "confirm"] as Phase[],
-  },
-  family: {
-    name: "Family & Group",
-    tagline: "Every face. Every moment.",
-    price: "₹8,999",
-    duration: "2 Hours",
-    includes: ["photography"],
-    color: "#e8c97a",
-    accent: "#c89a30",
-    bg: "radial-gradient(ellipse at 40% 30%, #0f1a08 0%, #04080f 70%)",
-    phases: ["camera", "family", "confirm"] as Phase[],
-  },
-  bridal: {
-    name: "Bridal / Couple",
-    tagline: "Cinematic. Unforgettable.",
-    price: "₹14,999",
-    duration: "Half Day",
-    includes: ["photography", "film"],
-    color: "#d4b0ff",
-    accent: "#9b7fe8",
-    bg: "radial-gradient(ellipse at 50% 10%, #120820 0%, #04080f 70%)",
-    phases: ["camera", "film", "confirm"] as Phase[],
-  },
-  fullday: {
-    name: "Full Day Coverage",
-    tagline: "Sunrise to last lamp.",
-    price: "₹24,999",
-    duration: "Sunrise → Night",
-    includes: ["photography", "drone", "film"],
-    color: "#7dd3fc",
-    accent: "#c89a30",
-    bg: "radial-gradient(ellipse at 50% 80%, #001428 0%, #04080f 70%)",
-    phases: ["camera", "drone", "film", "confirm"] as Phase[],
-  },
+// ── Icons ───────────────────────────────────────────────────────────────────
+const Icons = {
+  Calendar: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+  Clock: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+  User: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
+  Phone: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>,
+  Mail: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
+  CheckShield: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>,
+  ChevronLeft: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>,
+  ChevronRight: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>,
+  Plane: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6 4-3 3-3-1-2 2 4 4 4-2-1-3 3-3 4 6l1.2-.7c.4-.2.7-.6.6-1.1z"></path></svg>,
+  Barcode: () => <svg width="100%" height="35" viewBox="0 0 200 40" fill="currentColor" preserveAspectRatio="none"><path d="M0 0h6v40H0zM10 0h2v40h-2zM16 0h8v40h-8zM28 0h4v40h-4zM36 0h2v40h-2zM42 0h12v40H42zM58 0h4v40h-4zM66 0h2v40h-2zM72 0h6v40h-6zM82 0h8v40h-8zM94 0h2v40h-2zM100 0h10v40h-10zM114 0h4v40h-4zM122 0h2v40h-2zM128 0h8v40h-8zM140 0h4v40h-4zM148 0h2v40h-2zM154 0h12v40h-12zM170 0h6v40h-6zM180 0h4v40h-4zM188 0h2v40h-2zM194 0h6v40h-6z"></path></svg>
 };
 
-type PlanKey = keyof typeof PLANS;
-type Phase = "camera" | "family" | "drone" | "film" | "confirm";
+const AVAILABLE_SLOTS = ["06:00 AM", "08:30 AM", "11:00 AM", "03:30 PM", "05:30 PM"];
 
-function Starfield() {
-  const stars = useRef(
-    Array.from({ length: 140 }, (_, i) => ({
-      id: i,
-      top: Math.random() * 100,
-      left: Math.random() * 100,
-      size: Math.random() * 1.8 + 0.4,
-      dur: 2 + Math.random() * 4,
-      del: Math.random() * 6,
-    }))
-  ).current;
-  return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
-      {stars.map((s) => (
-        <div key={s.id} style={{
-          position: "absolute", top: `${s.top}%`, left: `${s.left}%`,
-          width: s.size, height: s.size, borderRadius: "50%", background: "#fff",
-          animation: `twinkle ${s.dur}s ease-in-out infinite ${s.del}s`,
-        }} />
-      ))}
-    </div>
-  );
-}
+function PremiumCalendar({ selectedDate, onSelectDate }: { selectedDate: string, onSelectDate: (d: string) => void }) {
+  const [viewDate, setViewDate] = useState(new Date());
 
-function Petals() {
-  const [petals, setPetals] = useState<{ id: number; left: number; size: number; dur: number; dx: number; emoji: string }[]>([]);
-  const counter = useRef(0);
-  useEffect(() => {
-    const emojis = ["🌸", "🪷", "🌺", "✿"];
-    const interval = setInterval(() => {
-      const id = counter.current++;
-      setPetals((p) => [
-        ...p.slice(-18),
-        { id, left: Math.random() * 100, size: 10 + Math.random() * 18, dur: 7 + Math.random() * 7, dx: (Math.random() - 0.5) * 80, emoji: emojis[Math.floor(Math.random() * emojis.length)] },
-      ]);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-  return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1, overflow: "hidden" }}>
-      {petals.map((p) => (
-        <div key={p.id} style={{
-          position: "absolute", bottom: -40, left: `${p.left}%`,
-          fontSize: p.size, animation: `floatUp ${p.dur}s ease-in forwards`,
-          ["--dx" as string]: `${p.dx}px`,
-        }}>{p.emoji}</div>
-      ))}
-    </div>
-  );
-}
+  const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+  const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
 
-function CameraPhase({ color, accent }: { color: string; accent: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
-      <div style={{ position: "relative", width: 280, height: 280, marginBottom: "2.5rem" }}>
-        {[0, 1, 2].map((i) => (
-          <div key={i} style={{ position: "absolute", inset: `${-i * 14}%`, borderRadius: "50%", border: `1.5px solid ${color}`, opacity: 0.3, animation: `pulseRing 2.4s ease-out ${i * 0.5}s infinite` }} />
-        ))}
-        <div style={{ position: "absolute", inset: 0, animation: "shutterSpin 3s linear infinite" }}>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} style={{ position: "absolute", top: "50%", left: "50%", width: "50%", height: 3, transformOrigin: "0 50%", transform: `rotate(${i * 36}deg)`, background: `linear-gradient(90deg, ${color}99, transparent)` }} />
-          ))}
-        </div>
-        <svg width="280" height="280" viewBox="0 0 280 280" style={{ position: "absolute", inset: 0, animation: "camBob 2s ease-in-out infinite" }}>
-          <rect x="30" y="80" width="220" height="150" rx="20" fill="#0a1020" stroke={color} strokeWidth="2.5" />
-          <rect x="80" y="58" width="60" height="28" rx="9" fill={color} />
-          <circle cx="120" cy="68" r="10" fill={accent} />
-          <circle cx="120" cy="68" r="6" fill={color} />
-          <circle cx="130" cy="155" r="62" fill="#040810" stroke={color} strokeWidth="2.5" />
-          <circle cx="130" cy="155" r="50" fill="#04080f" stroke={`${color}60`} strokeWidth="1.5" />
-          <g style={{ animation: "lensAper 5s linear infinite", transformOrigin: "130px 155px" }}>
-            {[0, 30, 60, 90, 120, 150].map((a) => (
-              <line key={a} x1="130" y1="155" x2={130 + 46 * Math.cos((a * Math.PI) / 180)} y2={155 + 46 * Math.sin((a * Math.PI) / 180)} stroke={`${color}25`} strokeWidth="1.5" />
-            ))}
-          </g>
-          <circle cx="130" cy="155" r="28" fill="#020609" stroke={`${color}80`} strokeWidth="1.5" />
-          <circle cx="118" cy="143" r="9" fill={color} opacity="0.45" style={{ animation: "lensDot 1.6s ease-in-out infinite" }} />
-          <circle cx="130" cy="155" r="8" fill={color} style={{ animation: "lensDot 1.6s ease-in-out infinite 0.3s" }} />
-          <circle cx="228" cy="90" r="12" fill={color} />
-          <circle cx="228" cy="90" r="7" fill={accent} />
-        </svg>
-        <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "white", animation: "shutterFlash 2.4s ease-in-out infinite", opacity: 0 }} />
-      </div>
-      <p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.65rem", letterSpacing: "0.35em", color, opacity: 0.7, marginBottom: "0.75rem", textTransform: "uppercase" }}>Aambal Vasantham Studio</p>
-      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 300, fontSize: "clamp(1.6rem,4vw,2.8rem)", color: "#fff", textAlign: "center", lineHeight: 1.2 }}>
-        Preparing your <em style={{ fontStyle: "italic", color: accent }}>cinematic journey…</em>
-      </h2>
-    </div>
-  );
-}
+  const prevMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
+  const nextMonth = () => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1));
 
-function FamilyPhase({ color }: { color: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
-      <div style={{ position: "relative", width: 320, height: 240, marginBottom: "2rem" }}>
-        {[{ x: 20, y: 30, r: 50, d: "2s" }, { x: 75, y: 60, r: 70, d: "3s" }, { x: 10, y: 70, r: 40, d: "2.5s" }, { x: 85, y: 20, r: 55, d: "3.5s" }].map((b, i) => (
-          <div key={i} style={{ position: "absolute", left: `${b.x}%`, top: `${b.y}%`, width: b.r, height: b.r, borderRadius: "50%", background: color, opacity: 0.07, animation: `bokehPulse ${b.d} ease-in-out infinite ${i * 0.4}s`, transform: "translate(-50%,-50%)" }} />
-        ))}
-        <svg width="320" height="240" viewBox="0 0 320 240">
-          <line x1="20" y1="210" x2="300" y2="210" stroke={`${color}30`} strokeWidth="1" />
-          {[60, 110, 160, 210, 260].map((x, i) => (
-            <g key={i} style={{ animation: `familyBob ${1.8 + i * 0.3}s ease-in-out infinite ${i * 0.2}s` }}>
-              <circle cx={x} cy={i % 2 === 0 ? 148 : 160} r={i === 2 ? 14 : 12} fill={color} opacity={0.7 - i * 0.05} />
-              <rect x={x - (i === 2 ? 12 : 10)} y={i % 2 === 0 ? 162 : 172} width={i === 2 ? 24 : 20} height={i === 2 ? 42 : 36} rx="6" fill={color} opacity={0.5 - i * 0.04} />
-            </g>
-          ))}
-          {[85, 160, 235].map((x, i) => (
-            <g key={i} style={{ animation: `familyBob ${1.5 + i * 0.4}s ease-in-out infinite ${i * 0.3 + 0.5}s` }}>
-              <circle cx={x} cy={190} r={9} fill={color} opacity={0.9} />
-              <rect x={x - 8} y={199} width={16} height={24} rx="4" fill={color} opacity={0.65} />
-            </g>
-          ))}
-          {([[20, 20], [300, 20], [20, 220], [300, 220]] as [number, number][]).map(([cx, cy], i) => (
-            <g key={i}>
-              <line x1={cx} y1={cy} x2={cx + (i % 2 === 0 ? 16 : -16)} y2={cy} stroke={color} strokeWidth="2" opacity="0.5" />
-              <line x1={cx} y1={cy} x2={cx} y2={cy + (i < 2 ? 16 : -16)} stroke={color} strokeWidth="2" opacity="0.5" />
-            </g>
-          ))}
-        </svg>
-      </div>
-      <p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.65rem", letterSpacing: "0.35em", color, opacity: 0.7, marginBottom: "0.75rem", textTransform: "uppercase" }}>Family & Group</p>
-      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 300, fontSize: "clamp(1.6rem,4vw,2.8rem)", color: "#fff", textAlign: "center", lineHeight: 1.2 }}>
-        Every face, <em style={{ fontStyle: "italic", color }}>every smile captured.</em>
-      </h2>
-    </div>
-  );
-}
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-function DronePhase({ color }: { color: string }) {
-  const [alt, setAlt] = useState(78);
-  useEffect(() => {
-    const t = setInterval(() => setAlt((a) => Math.round(Math.max(60, Math.min(95, a + (Math.random() - 0.4) * 3)))), 1200);
-    return () => clearInterval(t);
-  }, []);
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", position: "relative" }}>
-      <svg style={{ position: "fixed", inset: 0, width: "100%", height: "100%", opacity: 0.05, pointerEvents: "none" }} viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice">
-        <defs><pattern id="agrid" width="55" height="55" patternUnits="userSpaceOnUse"><path d="M55 0L0 0 0 55" fill="none" stroke="white" strokeWidth="0.6" /></pattern></defs>
-        <rect width="100%" height="100%" fill="url(#agrid)" />
-      </svg>
-      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-        <div style={{ position: "absolute", width: "100%", height: 1, background: `linear-gradient(90deg,transparent,${color}60,transparent)`, animation: "scanDown 4s linear infinite", opacity: 0.5 }} />
-      </div>
-      <div style={{ position: "relative", width: 300, height: 280, marginBottom: "1.5rem" }}>
-        <div style={{ position: "absolute", bottom: 0, left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "55px solid transparent", borderRight: "55px solid transparent", borderTop: `140px solid ${color}12`, animation: "beamPulse 3s ease-in-out infinite" }} />
-        <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)", width: 90, height: 10, borderRadius: "50%", background: color, opacity: 0.12, animation: "shadowPulse 3s ease-in-out infinite" }} />
-        <div style={{ position: "absolute", top: "20%", left: "50%", transform: "translateX(-50%)", animation: "droneFloat 3s ease-in-out infinite" }}>
-          <svg width="220" height="150" viewBox="0 0 220 150">
-            <line x1="22" y1="48" x2="198" y2="48" stroke={color} strokeWidth="3.5" strokeLinecap="round" />
-            <line x1="22" y1="80" x2="198" y2="80" stroke={color} strokeWidth="3.5" strokeLinecap="round" />
-            <line x1="22" y1="48" x2="22" y2="80" stroke={color} strokeWidth="3.5" strokeLinecap="round" />
-            <line x1="198" y1="48" x2="198" y2="80" stroke={color} strokeWidth="3.5" strokeLinecap="round" />
-            <rect x="76" y="54" width="68" height="20" rx="7" fill="#080f1a" stroke={color} strokeWidth="2" />
-            <circle cx="110" cy="64" r="6" fill={`${color}80`} style={{ animation: "lensDot 1.5s ease-in-out infinite" }} />
-            <rect x="86" y="74" width="48" height="30" rx="7" fill="#050c18" stroke={color} strokeWidth="1.5" />
-            <circle cx="110" cy="89" r="12" fill="#030810" stroke={`${color}80`} strokeWidth="1.5" />
-            <circle cx="110" cy="89" r="5" fill={color} opacity="0.85" />
-            {([[22, 48], [198, 48], [22, 80], [198, 80]] as [number, number][]).map(([cx, cy], i) => (
-              <g key={i} style={{ animation: `rotorBlur 0.06s linear infinite ${i % 2 === 0 ? "" : "reverse"}`, transformOrigin: `${cx}px ${cy}px` }}>
-                <ellipse cx={cx} cy={cy} rx="26" ry="4.5" fill={color} opacity="0.5" />
-                <ellipse cx={cx} cy={cy} rx="26" ry="4.5" fill={`${color}40`} transform={`rotate(55,${cx},${cy})`} />
-              </g>
-            ))}
-            <circle cx="22" cy="48" r="3.5" fill="#ff4444"><animate attributeName="opacity" values="1;.15;1" dur="0.9s" repeatCount="indefinite" /></circle>
-            <circle cx="198" cy="48" r="3.5" fill="#44ff88"><animate attributeName="opacity" values="1;.15;1" dur="0.9s" begin="0.45s" repeatCount="indefinite" /></circle>
-            <circle cx="22" cy="80" r="3.5" fill="#fff"><animate attributeName="opacity" values=".8;.1;.8" dur="1.4s" repeatCount="indefinite" /></circle>
-            <circle cx="198" cy="80" r="3.5" fill="#4488ff"><animate attributeName="opacity" values=".8;.1;.8" dur="1.2s" begin="0.3s" repeatCount="indefinite" /></circle>
-          </svg>
-        </div>
-        <div style={{ position: "absolute", right: "-5%", top: "5%", background: `${color}10`, border: `1px solid ${color}30`, borderRadius: 12, padding: "10px 16px", fontFamily: "'Cinzel', serif", fontSize: "0.65rem", letterSpacing: "0.2em", color, backdropFilter: "blur(8px)" }}>
-          <div style={{ opacity: 0.55, marginBottom: 3, fontSize: "0.55rem" }}>ALTITUDE</div>
-          <div style={{ fontSize: "1.3rem" }}>{alt} m</div>
-          <div style={{ opacity: 0.45, marginTop: 4, fontSize: "0.55rem" }}>4K · PRORES</div>
-        </div>
-        <div style={{ position: "absolute", left: "-5%", top: "10%", background: "rgba(68,136,255,.08)", border: "1px solid rgba(68,136,255,.25)", borderRadius: 10, padding: "8px 14px", fontFamily: "'Cinzel',serif", fontSize: "0.6rem", letterSpacing: "0.2em", color: "#7dd3fc", backdropFilter: "blur(6px)" }}>
-          <div style={{ opacity: 0.5, marginBottom: 2, fontSize: "0.55rem" }}>SIGNAL</div>
-          <div>●●●● <span style={{ opacity: 0.25 }}>●</span></div>
-          <div style={{ marginTop: 3, opacity: 0.45, fontSize: "0.55rem" }}>DGCA CERT</div>
-        </div>
-      </div>
-      <p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.65rem", letterSpacing: "0.35em", color, opacity: 0.7, marginBottom: "0.75rem", textTransform: "uppercase" }}>Full Day · Drone Aerials</p>
-      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 300, fontSize: "clamp(1.6rem,4vw,2.8rem)", color: "#fff", textAlign: "center", lineHeight: 1.2 }}>
-        Eyes in the sky, <em style={{ fontStyle: "italic", color }}>capturing everything.</em>
-      </h2>
-    </div>
-  );
-}
+  const renderDays = () => {
+    const days = [];
+    const offset = startDay === 0 ? 6 : startDay - 1; 
+    for (let i = 0; i < offset; i++) {
+      days.push(<div key={`empty-${i}`} className="w-8 h-8 sm:w-9 sm:h-9"></div>);
+    }
 
-function FilmPhase({ color, accent }: { color: string; accent: string }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%" }}>
-      <div style={{ position: "relative", width: 340, height: 200, marginBottom: "2rem" }}>
-        <svg width="340" height="200" viewBox="0 0 340 200">
-          <g style={{ animation: "reelSpin 3s linear infinite", transformOrigin: "75px 95px" }}>
-            <circle cx="75" cy="95" r="68" fill="#06101c" stroke={color} strokeWidth="2" />
-            <circle cx="75" cy="95" r="20" fill={color} />
-            <circle cx="75" cy="95" r="10" fill="#06101c" />
-            {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
-              <rect key={a} x="72" y="27" width="6" height="16" rx="3" fill={color} opacity="0.65" transform={`rotate(${a},75,95)`} />
-            ))}
-          </g>
-          <g style={{ animation: "reelSpin 3s linear infinite reverse", transformOrigin: "265px 95px" }}>
-            <circle cx="265" cy="95" r="68" fill="#06101c" stroke={accent} strokeWidth="2" />
-            <circle cx="265" cy="95" r="20" fill={accent} />
-            <circle cx="265" cy="95" r="10" fill="#06101c" />
-            {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => (
-              <rect key={a} x="262" y="27" width="6" height="16" rx="3" fill={accent} opacity="0.65" transform={`rotate(${a},265,95)`} />
-            ))}
-          </g>
-          <clipPath id="stripClip"><rect x="62" y="82" width="216" height="26" /></clipPath>
-          <rect x="62" y="82" width="216" height="26" fill="#040c18" />
-          <g clipPath="url(#stripClip)" style={{ animation: "stripSlide 0.9s linear infinite" }}>
-            {Array.from({ length: 8 }).map((_, i) => (
-              <g key={i}>
-                <rect x={62 + i * 44} y="85" width="40" height="20" rx="2" fill={i % 2 === 0 ? color : accent} opacity="0.5" />
-                <rect x={65 + i * 44} y="88" width="10" height="14" rx="1" fill="#040c18" />
-                <rect x={77 + i * 44} y="88" width="10" height="14" rx="1" fill="#040c18" />
-                <rect x={89 + i * 44} y="88" width="10" height="14" rx="1" fill="#040c18" />
-              </g>
-            ))}
-          </g>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <g key={i}>
-              <rect x={72 + i * 36} y="80" width="8" height="6" rx="1" fill="#020810" />
-              <rect x={72 + i * 36} y="108" width="8" height="6" rx="1" fill="#020810" />
-            </g>
-          ))}
-          <g transform="translate(140,140)" style={{ animation: "clapperShake 3s ease-in-out infinite" }}>
-            <rect x="0" y="10" width="60" height="40" rx="4" fill="#0a1525" stroke={color} strokeWidth="1.5" />
-            <rect x="0" y="0" width="60" height="14" rx="3" fill={color} opacity="0.8" />
-            {[10, 22, 34, 46].map((x) => <line key={x} x1={x} y1="0" x2={x - 7} y2="14" stroke="#040c18" strokeWidth="2" />)}
-            <text x="8" y="36" fill="white" fontFamily="'Cinzel',serif" fontSize="8" opacity="0.6">SCENE 1</text>
-          </g>
-        </svg>
-      </div>
-      <p style={{ fontFamily: "'Cinzel', serif", fontSize: "0.65rem", letterSpacing: "0.35em", color, opacity: 0.7, marginBottom: "0.75rem", textTransform: "uppercase" }}>Cinematic Film</p>
-      <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontWeight: 300, fontSize: "clamp(1.6rem,4vw,2.8rem)", color: "#fff", textAlign: "center", lineHeight: 1.2 }}>
-        Your story, <em style={{ fontStyle: "italic", color }}>rolling in 4K.</em>
-      </h2>
-    </div>
-  );
-}
+    for (let d = 1; d <= daysInMonth; d++) {
+      const currentDate = new Date(viewDate.getFullYear(), viewDate.getMonth(), d);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      const isPast = currentDate < today;
+      const dateString = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+      const isSelected = selectedDate === dateString;
 
-function ConfirmPhase({ plan }: { plan: typeof PLANS[PlanKey] & { key: PlanKey } }) {
-  const includeBadges = [
-    plan.includes.includes("photography") && { label: "📸 Photography", cls: "photo" },
-    plan.includes.includes("drone") && { label: "🚁 Drone aerials", cls: "drone" },
-    plan.includes.includes("film") && { label: "🎬 Cinematic film", cls: "film" },
-  ].filter(Boolean) as { label: string; cls: string }[];
-const [
-  showBooking,
-  setShowBooking,
-] = useState(false);
-
-const [
-  bookingConfirmed,
-  setBookingConfirmed,
-] = useState(false);
-  return (
-    <div style={{ width: "100%", maxWidth: 900, margin: "0 auto", padding: "2rem 1rem" }}>
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        style={{
-          background: "linear-gradient(160deg, rgba(200,154,48,.07) 0%, rgba(8,15,26,.97) 100%)",
-          border: `1px solid ${plan.color}35`,
-          borderRadius: 28,
-          padding: "clamp(1.5rem,4vw,3rem) clamp(1.2rem,4vw,2.5rem)",
-          boxShadow: `0 0 80px ${plan.color}12, 0 40px 80px rgba(0,0,0,.6)`,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Background grid */}
-        <div style={{ position: "absolute", inset: 0, backgroundImage: `repeating-linear-gradient(0deg,transparent,transparent 39px,${plan.color}06 40px)`, pointerEvents: "none" }} />
-
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "2rem" }}>
-          <motion.span
-            initial={{ scale: 0, rotate: -180 }}
-            animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.2, type: "spring", damping: 14 }}
-            style={{ display: "block", fontSize: "3rem", marginBottom: "1rem" }}
-          >
-            🪷
-          </motion.span>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            style={{ fontFamily: "'Cinzel', serif", fontSize: "clamp(1.3rem,4vw,1.9rem)", letterSpacing: "0.12em", color: plan.accent, marginBottom: "0.4rem" }}
-          >
-            {plan.name}
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "1.1rem", color: "rgba(255,255,255,.5)", marginBottom: "1rem" }}
-          >
-            {plan.tagline} · {plan.price}
-          </motion.p>
-
-          {/* Include badges */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            style={{ display: "flex", flexWrap: "wrap", gap: 7, justifyContent: "center", marginBottom: "0.5rem" }}
-          >
-            {includeBadges.map((b) => (
-              <span key={b.label} style={{
-                fontSize: 11, padding: "4px 14px", borderRadius: 100, letterSpacing: "0.05em",
-                background: b.cls === "photo" ? "rgba(200,154,48,.12)" : b.cls === "drone" ? "rgba(74,159,212,.1)" : "rgba(155,127,232,.1)",
-                border: `1px solid ${b.cls === "photo" ? "rgba(200,154,48,.28)" : b.cls === "drone" ? "rgba(74,159,212,.28)" : "rgba(155,127,232,.28)"}`,
-                color: b.cls === "photo" ? plan.color : b.cls === "drone" ? "#7dd3fc" : "#c4b5fd",
-              }}>{b.label}</span>
-            ))}
-          </motion.div>
-
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ delay: 0.6, duration: 0.6 }}
-            style={{ width: 60, height: 1, background: `linear-gradient(90deg,transparent,${plan.color},transparent)`, margin: "1.5rem auto 0" }}
-          />
-        </div>
-
-        {/* BOOKING CTA */}
-
-<motion.div
-  initial={{
-    opacity: 0,
-    y: 20,
-  }}
-  animate={{
-    opacity: 1,
-    y: 0,
-  }}
-  transition={{
-    delay: 0.7,
-  }}
->
-
-  <p
-    style={{
-      color:
-        "rgba(255,255,255,0.5)",
-      fontSize: "0.85rem",
-      marginBottom: "1.5rem",
-      textAlign: "center",
-      fontStyle: "italic",
-    }}
-  >
-    Select your date and
-    time slot below to
-    reserve your session
-  </p>
-
-  {bookingConfirmed ? (
-
-    <div
-      style={{
-        width: "100%",
-        padding:
-          "18px",
-        borderRadius:
-          999,
-        background:
-          "#16a34a",
-        textAlign:
-          "center",
-        fontWeight: 700,
-        fontSize:
-          "1rem",
-      }}
-    >
-      ✅ Booking Confirmed
-    </div>
-
-  ) : (
-
-    <button
-      onClick={() =>
-        setShowBooking(
-          true
-        )
-      }
-      style={{
-        width: "100%",
-        padding:
-          "18px",
-        border: "none",
-        borderRadius:
-          999,
-        background:
-          `linear-gradient(135deg,${plan.color},${plan.accent})`,
-        color: "#000",
-        fontWeight: 700,
-        fontSize:
-          "1rem",
-        cursor:
-          "pointer",
-      }}
-    >
-      📅 Select Date &
-      Continue
-    </button>
-
-  )}
-
-</motion.div>
-
-{/* BOOKING POPUP */}
-
-<AnimatePresence>
-
-  {showBooking && (
-
-    <motion.div
-      initial={{
-        opacity: 0,
-      }}
-      animate={{
-        opacity: 1,
-      }}
-      exit={{
-        opacity: 0,
-      }}
-      style={{
-        position:
-          "fixed",
-        inset: 0,
-        background:
-          "rgba(0,0,0,.85)",
-        backdropFilter:
-          "blur(20px)",
-        zIndex: 9999,
-        overflowY: "auto",
-        padding: "2rem",
-      }}
-    >
-
-      <motion.div
-        initial={{
-          scale: 0.9,
-          opacity: 0,
-        }}
-        animate={{
-          scale: 1,
-          opacity: 1,
-        }}
-        exit={{
-          scale: 0.9,
-          opacity: 0,
-        }}
-        style={{
-          maxWidth:
-            "1400px",
-          margin:
-            "0 auto",
-        }}
-      >
-
-        <BookingForm
-
-          selectedPlan={{
-            name:
-              plan.name,
-            price:
-              plan.price,
-          }}
-
-          onBookingComplete={async (
-            bookingData: any
-          ) => {
-
-            try {
-
-              const message = `
-🌸 Aambal Vasantham Studio
-
-✅ Booking Confirmed
-
-📦 Package:
-${plan.name}
-
-💰 Price:
-${plan.price}
-
-👤 Name:
-${bookingData.name}
-
-📞 Phone:
-${bookingData.phone}
-
-📅 Date:
-${bookingData.date}
-
-⏰ Time:
-${bookingData.time}
-
-🆔 Ref:
-${bookingData.reference}
-`;
-
-              await sendWhatsAppMessage(
-  bookingData.phone,
-
-  {
-    name:
-      bookingData.name,
-
-    packageName:
-      plan.name,
-
-    price:
-      plan.price,
-
-    date:
-      bookingData.date,
-
-    time:
-      bookingData.time,
-
-    reference:
-      bookingData.reference,
-  }
-);
-
-              setBookingConfirmed(
-                true
-              );
-
-              setShowBooking(
-                false
-              );
-
-            } catch (err) {
-
-              console.error(
-                err
-              );
-
-              alert(
-                "Booking failed"
-              );
-
-            }
-
-          }}
-        />
-
-      </motion.div>
-
-    </motion.div>
-
-  )}
-
-</AnimatePresence>
-      </motion.div>
-    </div>
-  );
-}
-
-function BookingConfirmed() {
-  const { plan: selectedPlan } =
-    Route.useSearch();
-
-  const planKey =
-    (selectedPlan ?? "portrait") as PlanKey;
-
-  const plan = {
-    ...(PLANS[planKey] ?? PLANS.portrait),
-    key: planKey,
+      days.push(
+        <button
+          key={d}
+          type="button"
+          disabled={isPast}
+          onClick={() => onSelectDate(dateString)}
+          className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300
+            ${isPast ? 'text-slate-300 cursor-not-allowed' : 
+              isSelected ? 'bg-[#a3889f] text-white shadow-md scale-105' : 
+              'text-slate-600 hover:bg-white/80 hover:text-slate-900'
+            }`}
+        >
+          {d}
+        </button>
+      );
+    }
+    return days;
   };
 
-  const [phaseIdx, setPhaseIdx] =
-    useState(0);
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-  const phases = plan.phases;
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-4">
+        <button type="button" onClick={prevMonth} className="w-7 h-7 rounded-full flex items-center justify-center bg-white/60 hover:bg-white text-slate-600 transition-colors shadow-sm"><Icons.ChevronLeft /></button>
+        <h3 className="text-slate-700 font-bold tracking-wide text-xs uppercase">
+          {monthNames[viewDate.getMonth()]} {viewDate.getFullYear()}
+        </h3>
+        <button type="button" onClick={nextMonth} className="w-7 h-7 rounded-full flex items-center justify-center bg-white/60 hover:bg-white text-slate-600 transition-colors shadow-sm"><Icons.ChevronRight /></button>
+      </div>
+      <div className="grid grid-cols-7 gap-y-1 text-center mb-1">
+        {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map(day => (
+          <div key={day} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{day}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-y-1.5 justify-items-center">
+        {renderDays()}
+      </div>
+    </div>
+  );
+}
+
+export default function MainBookingApp() {
+  const { plan: planId } = Route.useSearch();
+  const navigate = useNavigate();
+
+  // Multi-step state (1: Info, 2: Schedule, 3: Success)
+  const [step, setStep] = useState<number>(1);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [loadingPlan, setLoadingPlan] = useState(true);
+
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
 
   useEffect(() => {
-    if (phaseIdx >= phases.length - 1)
-      return;
-
-    const t = setTimeout(
-      () => setPhaseIdx((i) => i + 1),
-      3200
-    );
-
-    return () => clearTimeout(t);
-  }, [phaseIdx, phases.length]);
-
-  const progress =
-    (phaseIdx /
-      (phases.length - 1)) *
-    100;
-
-  function renderPhase(phase: Phase) {
-    switch (phase) {
-      case "camera": return <CameraPhase color={plan.color} accent={plan.accent} />;
-      case "family": return <FamilyPhase color={plan.color} />;
-      case "drone": return <DronePhase color={plan.color} />;
-      case "film": return <FilmPhase color={plan.color} accent={plan.accent} />;
-      case "confirm": return <ConfirmPhase plan={plan} />;
+    async function fetchPackageContext() {
+      try {
+        const pkgDoc = await getDoc(doc(db, "siteContent", "packages"));
+        if (pkgDoc.exists() && planId) {
+          const allPackages = pkgDoc.data();
+          if (allPackages[planId]) {
+            setSelectedPlan(allPackages[planId]);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching packages content:", err);
+      } finally {
+        setLoadingPlan(false);
+      }
     }
+    fetchPackageContext();
+  }, [planId]);
+
+  useEffect(() => {
+    if (!selectedDate) {
+      setBookedSlots([]);
+      return;
+    }
+    const bookingsRef = collection(db, "bookings");
+    const dateQuery = query(bookingsRef, where("date", "==", selectedDate));
+
+    const unsubscribe = onSnapshot(dateQuery, (snapshot) => {
+      const taken: string[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.time) taken.push(data.time);
+      });
+      setBookedSlots(taken);
+    }, (error) => console.error("Availability stream error:", error));
+
+    return () => unsubscribe();
+  }, [selectedDate]);
+
+  const handleBookingExecution = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDate || !selectedTime || !name || !phone || !email) {
+      alert("Please complete all details to proceed.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const bookingReference = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const operationalPayload = {
+      referenceId: bookingReference, // Explicit mapping for the verification page
+      packageName: selectedPlan?.name || planId || "Premium Package",
+      packagePrice: selectedPlan?.price || "Custom Rate",
+      date: selectedDate,
+      time: selectedTime,
+      clientName: name,
+      clientPhone: phone,
+      clientEmail: email,
+      createdTimestamp: new Date().toISOString(),
+    };
+
+    try {
+      await addDoc(collection(db, "bookings"), operationalPayload);
+
+      // Construct verification URL based on deployment origin
+      const baseUrl = window.location.origin.includes("localhost") 
+        ? "https://your-production-url.com" // Provide fallback if testing locally to simulate real scanning
+        : window.location.origin;
+      const verificationUrl = `${baseUrl}/verify-booking?ref=${bookingReference}`;
+      const qrEndpoint = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verificationUrl)}`;
+
+      try {
+        await sendWhatsAppMessage(phone, {
+          name,
+          packageName: operationalPayload.packageName,
+          price: operationalPayload.packagePrice,
+          date: selectedDate,
+          time: selectedTime,
+          reference: `${bookingReference}\n\nView Digital Pass: ${verificationUrl}`,
+        });
+      } catch (wsErr) {
+        console.error("WhatsApp notification failure:", wsErr);
+      }
+
+      setConfirmedBooking({ ...operationalPayload, qrUrl: qrEndpoint });
+      setStep(3); // Progress to confirmation screen
+    } catch (error) {
+      console.error("Submission failed:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loadingPlan) {
+    return (
+      <div className="min-h-screen bg-[#fcfaf9] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#a3889f] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Cinzel:wght@400;600&display=swap');
-        *, *::before, *::after { box-sizing: border-box; }
-        @keyframes twinkle { 0%,100%{opacity:.1} 50%{opacity:.8} }
-        @keyframes floatUp { 0%{transform:translateY(0) rotate(0deg);opacity:0} 10%{opacity:.7} 80%{opacity:.3} 100%{transform:translateY(-110vh) rotate(720deg) translateX(var(--dx,30px));opacity:0} }
-        @keyframes shutterSpin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
-        @keyframes camBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-        @keyframes pulseRing { 0%{transform:scale(.85);opacity:.4} 100%{transform:scale(1.05);opacity:0} }
-        @keyframes shutterFlash { 0%,88%,100%{opacity:0} 92%,96%{opacity:.18} }
-        @keyframes lensAper { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
-        @keyframes lensDot { 0%,100%{opacity:.4;transform:scale(1)} 50%{opacity:1;transform:scale(1.2)} }
-        @keyframes droneFloat { 0%,100%{transform:translateX(-50%) translateY(0)} 50%{transform:translateX(-50%) translateY(-16px)} }
-        @keyframes beamPulse { 0%,100%{opacity:.5} 50%{opacity:.9} }
-        @keyframes shadowPulse { 0%,100%{transform:translateX(-50%) scaleX(1);opacity:.15} 50%{transform:translateX(-50%) scaleX(.55);opacity:.05} }
-        @keyframes rotorBlur { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
-        @keyframes scanDown { 0%{top:-2px} 100%{top:100%} }
-        @keyframes reelSpin { 0%{transform:rotate(0)} 100%{transform:rotate(360deg)} }
-        @keyframes stripSlide { 0%{transform:translateX(0)} 100%{transform:translateX(-44px)} }
-        @keyframes clapperShake { 0%,90%,100%{transform:rotate(0)} 94%{transform:rotate(-8deg)} 97%{transform:rotate(3deg)} }
-        @keyframes familyBob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-        @keyframes bokehPulse { 0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.08} 50%{transform:translate(-50%,-50%) scale(1.3);opacity:.04} }
-      `}</style>
+    <div className="min-h-screen w-full relative bg-gradient-to-br from-[#f8ecec] via-[#f4f0f0] to-[#e6e9f0] flex items-center justify-center p-4 sm:p-8 font-sans overflow-hidden">
+      
+      {/* Decorative Blur Elements */}
+      <div className="absolute top-[10%] left-[5%] w-32 h-32 bg-white/40 rounded-full blur-2xl"></div>
+      <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#d8c5d6]/30 rounded-full blur-3xl"></div>
 
-      <div style={{ position: "fixed", inset: 0, background: plan.bg, zIndex: -2 }} />
-      <Starfield />
-      <Petals />
-
-      {/* Progress bar */}
-      <div style={{ position: "fixed", top: 0, left: 0, height: 2, background: `linear-gradient(90deg,${plan.color},${plan.accent})`, width: `${progress}%`, transition: "width .5s ease", zIndex: 100 }} />
-
-      {/* Phase dots */}
-      <div style={{ position: "fixed", bottom: "1.5rem", left: "50%", transform: "translateX(-50%)", display: "flex", gap: 8, zIndex: 50 }}>
-        {phases.map((_, i) => (
-          <div key={i} style={{ height: 6, width: i === phaseIdx ? 20 : 6, borderRadius: 3, background: i === phaseIdx ? plan.color : `${plan.color}40`, transition: "all .4s" }} />
-        ))}
-      </div>
-
-      {/* Phase renderer */}
-      <div style={{ position: "fixed", inset: 0, zIndex: 10, overflowY: "auto" }}>
+      {/* Main Glassmorphic Panel */}
+      <div className="relative z-10 w-full max-w-[1150px] bg-[#fcfaf9]/80 backdrop-blur-3xl rounded-[40px] border border-white/60 shadow-[0_20px_60px_rgba(163,136,159,0.12)] p-5 sm:p-8 flex flex-col min-h-[700px]">
+        
         <AnimatePresence mode="wait">
-          <motion.div
-            key={phases[phaseIdx]}
-            initial={{ opacity: 0, scale: 1.06 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-            style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}
-          >
-            {renderPhase(phases[phaseIdx])}
-          </motion.div>
+          {step < 3 ? (
+            
+            // ── STEPS 1 & 2: RESPONSIVE WIZARD ──
+            <motion.div key="booking-form" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.4 }} className="w-full flex flex-col flex-1">
+              
+              <div className="flex items-center justify-between mb-4 lg:mb-6">
+                 <button onClick={() => navigate({ to: "/" })} className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-slate-800 transition-colors group">
+                    <span className="transform group-hover:-translate-x-0.5 transition-transform"><Icons.ChevronLeft /></span> Back
+                  </button>
+                  <div className="flex items-center gap-2 bg-white/60 px-4 py-1.5 rounded-full border border-white/80 shadow-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reserve Hub</span>
+                  </div>
+              </div>
+
+              {/* Mobile Progress Indicator */}
+              <div className="lg:hidden flex items-center justify-between mb-6 px-2">
+                <div className="flex items-center gap-2">
+                   <div className={`w-8 h-1.5 rounded-full ${step >= 1 ? 'bg-[#a3889f]' : 'bg-slate-200'}`}></div>
+                   <div className={`w-8 h-1.5 rounded-full ${step >= 2 ? 'bg-[#a3889f]' : 'bg-slate-200'}`}></div>
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                   Step {step} of 2
+                </span>
+              </div>
+
+              {/* Dynamic Grid: Stacks conditionally on Mobile, Side-by-Side on Desktop */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
+                
+                {/* COLUMN 1: Details (Visible on Desktop OR when Step 1 on Mobile) */}
+                <div className={`lg:col-span-7 flex-col gap-6 ${step === 1 ? 'flex' : 'hidden lg:flex'}`}>
+                  
+                  <div className="bg-[#fffdfb]/80 border border-white/80 rounded-[32px] p-6 sm:p-8 shadow-sm">
+                    <h2 className="text-xs text-[#a3889f] uppercase tracking-widest font-bold mb-1">Pass Configuration</h2>
+                    <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-800 mb-6">
+                      Secure your <span className="text-[#a3889f]">Digital Access</span>
+                    </h1>
+                    
+                    <div className="flex flex-wrap items-center gap-4 bg-[#fffaf5] p-4 rounded-2xl border border-slate-100">
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Experience</p>
+                        <p className="text-xs font-bold text-slate-700 truncate">{selectedPlan?.name || "Premium Session"}</p>
+                      </div>
+                      <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Timeline</p>
+                        <p className="text-xs font-bold text-slate-700 truncate">{selectedPlan?.duration || "Standard Block"}</p>
+                      </div>
+                      <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
+                      <div className="flex-1 min-w-[120px]">
+                        <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Price Value</p>
+                        <p className="text-xs font-extrabold text-[#a3889f] truncate">{selectedPlan?.price || "₹14,999"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-[#fffdfb]/80 border border-white/80 rounded-[32px] p-6 sm:p-8 shadow-sm flex-1">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Icons.User /> Holder Profile
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="relative">
+                          <span className="absolute left-4 top-[15px] text-slate-400"><Icons.User /></span>
+                          <input type="text" required placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-white/60 border border-white/50 rounded-xl pl-11 pr-4 py-3.5 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] focus:bg-white/90 transition-all placeholder-slate-400 shadow-inner" />
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-4 top-[15px] text-slate-400"><Icons.Phone /></span>
+                          <input type="tel" required placeholder="WhatsApp Contact" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white/60 border border-white/50 rounded-xl pl-11 pr-4 py-3.5 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] focus:bg-white/90 transition-all placeholder-slate-400 shadow-inner" />
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-4 top-[15px] text-slate-400"><Icons.Mail /></span>
+                        <input type="email" required placeholder="Digital Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white/60 border border-white/50 rounded-xl pl-11 pr-4 py-3.5 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] focus:bg-white/90 transition-all placeholder-slate-400 shadow-inner" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Only "Next" Button */}
+                  <button type="button" onClick={() => setStep(2)} disabled={!name || !phone || !email} className="lg:hidden w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all mt-4">
+                    Continue to Schedule
+                  </button>
+                </div>
+
+                {/* COLUMN 2: Calendar & Times (Visible on Desktop OR when Step 2 on Mobile) */}
+                <div className={`lg:col-span-5 flex-col gap-6 ${step === 2 ? 'flex' : 'hidden lg:flex'}`}>
+                  
+                  {/* Mobile Only "Back" Button */}
+                  <button type="button" onClick={() => setStep(1)} className="lg:hidden w-full bg-white text-slate-600 border border-slate-200 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all">
+                    Back to Details
+                  </button>
+
+                  <div className="bg-[#fffdfb]/80 border border-white/80 rounded-[32px] p-6 shadow-sm">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Icons.Calendar /> Target Date
+                    </h3>
+                    <PremiumCalendar selectedDate={selectedDate} onSelectDate={(d) => { setSelectedDate(d); setSelectedTime(""); }} />
+                  </div>
+
+                  <div className="bg-[#fffdfb]/80 border border-white/80 rounded-[32px] p-6 shadow-sm flex-1 flex flex-col">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <Icons.Clock /> Window Allocation
+                    </h3>
+                    
+                    {!selectedDate ? (
+                      <div className="flex-1 flex items-center justify-center text-xs font-semibold text-slate-400 text-center px-4 bg-white/40 rounded-2xl border border-slate-100 border-dashed min-h-[140px]">
+                        Choose active date coordinates above
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {AVAILABLE_SLOTS.map((time) => {
+                          const isBooked = bookedSlots.includes(time);
+                          const isSelected = selectedTime === time;
+
+                          return (
+                            <button
+                              key={time}
+                              type="button"
+                              disabled={isBooked}
+                              onClick={() => setSelectedTime(time)}
+                              className={`py-3 px-4 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-between border
+                                ${isBooked ? 'bg-slate-100/70 border-slate-200 text-slate-300 cursor-not-allowed line-through' : 
+                                  isSelected ? 'bg-[#a3889f] border-[#a3889f] text-white shadow-sm' : 
+                                  'bg-white border-white text-slate-600 hover:border-slate-200 hover:bg-slate-50'
+                                }`}
+                            >
+                              <span>{time}</span>
+                              <div className={`w-3.5 h-3.5 rounded-full border-2 transition-all flex items-center justify-center ${isSelected ? 'border-white bg-white' : 'border-slate-200'}`}>
+                                {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-[#a3889f]"></div>}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Core Form Submit Action */}
+                  <button 
+                    onClick={handleBookingExecution}
+                    disabled={isSubmitting || !selectedDate || !selectedTime || !name} 
+                    className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white disabled:text-slate-500 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg active:scale-[0.99]"
+                  >
+                    {isSubmitting ? "Generating Credentials..." : "Generate Digital Pass"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+
+          ) : (
+            
+            // ── PAGE 3: CONFIRMATION & EMBEDDED DIGITAL TICKET ──
+            <motion.div key="page-3" initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="w-full flex-1 flex flex-col items-center justify-center py-6 sm:py-10">
+              
+              <div className="text-center mb-8">
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-500 border border-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                  <Icons.CheckShield />
+                </div>
+                <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Pass Secured Successfully</h1>
+                <p className="text-slate-400 mt-1.5 text-xs font-medium max-w-sm mx-auto">Your confirmation credentials have been synced and transmitted via real-time stream channel.</p>
+              </div>
+
+              <div className="w-full max-w-[850px] bg-[#fffdfb]/90 backdrop-blur-2xl rounded-[36px] border border-white/90 shadow-[0_15px_40px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col md:flex-row relative">
+                
+                <div className="absolute top-1/2 -left-3.5 w-7 h-7 bg-[#f2eeee] rounded-full transform -translate-y-1/2 shadow-inner border-r border-slate-200/40 z-20 hidden md:block"></div>
+                <div className="absolute top-1/2 -right-3.5 w-7 h-7 bg-[#f2eeee] rounded-full transform -translate-y-1/2 shadow-inner border-l border-slate-200/40 z-20 hidden md:block"></div>
+                
+                <div className="flex-1 p-6 sm:p-8 border-b md:border-b-0 md:border-r border-slate-200 border-dashed relative bg-[#fffaf5]/50">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex flex-col">
+                      <span className="text-2xl font-black text-slate-800 tracking-tight">{confirmedBooking.referenceId.split('-')[0]}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest truncate max-w-[150px]">{confirmedBooking.packageName}</span>
+                    </div>
+                    <div className="text-[#b09db9]"><Icons.Plane /></div>
+                    <div className="flex flex-col text-right">
+                      <span className="text-2xl font-black text-slate-800 tracking-tight">{confirmedBooking.referenceId.split('-')[1]}</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">ID REF</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-white/80 border border-slate-100 rounded-2xl p-4 shadow-sm flex justify-between items-center">
+                       <div>
+                         <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Assigned Date</p>
+                         <p className="text-xs font-bold text-slate-800">{new Date(confirmedBooking.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                       </div>
+                       <div className="text-right">
+                         <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Timeline Window</p>
+                         <p className="text-xs font-bold text-slate-800">{confirmedBooking.time}</p>
+                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white/80 border border-slate-100 rounded-2xl p-4 shadow-sm">
+                         <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Primary Holder</p>
+                         <p className="text-xs font-bold text-slate-800 truncate">{confirmedBooking.clientName}</p>
+                      </div>
+                      <div className="bg-white/80 border border-slate-100 rounded-2xl p-4 shadow-sm">
+                         <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Operational Status</p>
+                         <span className="inline-flex items-center text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider mt-0.5">Verified</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-slate-100 text-slate-700 opacity-60">
+                     <Icons.Barcode />
+                  </div>
+                </div>
+
+                <div className="w-full md:w-[260px] p-6 sm:p-8 flex flex-col items-center justify-center bg-white/70">
+                  <p className="text-[10px] font-bold text-slate-400 mb-4 tracking-widest text-center uppercase">Validation Token</p>
+                  <div className="bg-[#fffdfb] p-3 rounded-2xl shadow-md border border-slate-100 hover:scale-105 transition-transform duration-300">
+                    <img src={confirmedBooking.qrUrl} alt="QR Secure Code Pass" className="w-28 h-28 object-contain" />
+                  </div>
+                  <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-widest mt-4 text-center">Scan to verify booking</p>
+                </div>
+              </div>
+
+              <button onClick={() => navigate({ to: "/" })} className="mt-8 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors bg-white/60 hover:bg-white/90 px-8 py-3 rounded-full border border-white/80 shadow-sm">
+                Return to Dashboard
+              </button>
+            </motion.div>
+
+          )}
         </AnimatePresence>
+
       </div>
-    </>
+    </div>
   );
 }

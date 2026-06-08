@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VerifyBookingRouteImport } from './routes/verify-booking'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ShootManagerRouteImport } from './routes/shoot-manager'
 import { Route as ShootDetailsRouteImport } from './routes/shoot-details'
@@ -21,7 +22,10 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomestayEditorRouteImport } from './routes/homestay-editor'
 import { Route as HomestayRouteImport } from './routes/homestay'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as HeroEditorRouteImport } from './routes/hero-editor'
 import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as EnquiryEditorRouteImport } from './routes/enquiry-editor'
+import { Route as EnquiryRouteImport } from './routes/enquiry'
 import { Route as CustomerSignupRouteImport } from './routes/customer-signup'
 import { Route as CustomerProfileRouteImport } from './routes/customer-profile'
 import { Route as CustomerLoginRouteImport } from './routes/customer-login'
@@ -29,11 +33,17 @@ import { Route as CustomerHistoryRouteImport } from './routes/customer-history'
 import { Route as CustomerGalleryRouteImport } from './routes/customer-gallery'
 import { Route as CustomerDashboardRouteImport } from './routes/customer-dashboard'
 import { Route as BookingConfirmedRouteImport } from './routes/booking-confirmed'
+import { Route as AdminEnquiriesRouteImport } from './routes/admin-enquiries'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminShootEditorRouteImport } from './routes/admin.shoot-editor'
 
+const VerifyBookingRoute = VerifyBookingRouteImport.update({
+  id: '/verify-booking',
+  path: '/verify-booking',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -94,9 +104,24 @@ const HistoryRoute = HistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HeroEditorRoute = HeroEditorRouteImport.update({
+  id: '/hero-editor',
+  path: '/hero-editor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GalleryRoute = GalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnquiryEditorRoute = EnquiryEditorRouteImport.update({
+  id: '/enquiry-editor',
+  path: '/enquiry-editor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnquiryRoute = EnquiryRouteImport.update({
+  id: '/enquiry',
+  path: '/enquiry',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomerSignupRoute = CustomerSignupRouteImport.update({
@@ -134,6 +159,11 @@ const BookingConfirmedRoute = BookingConfirmedRouteImport.update({
   path: '/booking-confirmed',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEnquiriesRoute = AdminEnquiriesRouteImport.update({
+  id: '/admin-enquiries',
+  path: '/admin-enquiries',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -158,6 +188,7 @@ const AdminShootEditorRoute = AdminShootEditorRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin-enquiries': typeof AdminEnquiriesRoute
   '/booking-confirmed': typeof BookingConfirmedRoute
   '/customer-dashboard': typeof CustomerDashboardRoute
   '/customer-gallery': typeof CustomerGalleryRoute
@@ -165,7 +196,10 @@ export interface FileRoutesByFullPath {
   '/customer-login': typeof CustomerLoginRoute
   '/customer-profile': typeof CustomerProfileRoute
   '/customer-signup': typeof CustomerSignupRoute
+  '/enquiry': typeof EnquiryRoute
+  '/enquiry-editor': typeof EnquiryEditorRoute
   '/gallery': typeof GalleryRoute
+  '/hero-editor': typeof HeroEditorRoute
   '/history': typeof HistoryRoute
   '/homestay': typeof HomestayRoute
   '/homestay-editor': typeof HomestayEditorRoute
@@ -178,11 +212,13 @@ export interface FileRoutesByFullPath {
   '/shoot-details': typeof ShootDetailsRoute
   '/shoot-manager': typeof ShootManagerRoute
   '/signup': typeof SignupRoute
+  '/verify-booking': typeof VerifyBookingRoute
   '/admin/shoot-editor': typeof AdminShootEditorRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin-enquiries': typeof AdminEnquiriesRoute
   '/booking-confirmed': typeof BookingConfirmedRoute
   '/customer-dashboard': typeof CustomerDashboardRoute
   '/customer-gallery': typeof CustomerGalleryRoute
@@ -190,7 +226,10 @@ export interface FileRoutesByTo {
   '/customer-login': typeof CustomerLoginRoute
   '/customer-profile': typeof CustomerProfileRoute
   '/customer-signup': typeof CustomerSignupRoute
+  '/enquiry': typeof EnquiryRoute
+  '/enquiry-editor': typeof EnquiryEditorRoute
   '/gallery': typeof GalleryRoute
+  '/hero-editor': typeof HeroEditorRoute
   '/history': typeof HistoryRoute
   '/homestay': typeof HomestayRoute
   '/homestay-editor': typeof HomestayEditorRoute
@@ -203,6 +242,7 @@ export interface FileRoutesByTo {
   '/shoot-details': typeof ShootDetailsRoute
   '/shoot-manager': typeof ShootManagerRoute
   '/signup': typeof SignupRoute
+  '/verify-booking': typeof VerifyBookingRoute
   '/admin/shoot-editor': typeof AdminShootEditorRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -210,6 +250,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/admin-enquiries': typeof AdminEnquiriesRoute
   '/booking-confirmed': typeof BookingConfirmedRoute
   '/customer-dashboard': typeof CustomerDashboardRoute
   '/customer-gallery': typeof CustomerGalleryRoute
@@ -217,7 +258,10 @@ export interface FileRoutesById {
   '/customer-login': typeof CustomerLoginRoute
   '/customer-profile': typeof CustomerProfileRoute
   '/customer-signup': typeof CustomerSignupRoute
+  '/enquiry': typeof EnquiryRoute
+  '/enquiry-editor': typeof EnquiryEditorRoute
   '/gallery': typeof GalleryRoute
+  '/hero-editor': typeof HeroEditorRoute
   '/history': typeof HistoryRoute
   '/homestay': typeof HomestayRoute
   '/homestay-editor': typeof HomestayEditorRoute
@@ -230,6 +274,7 @@ export interface FileRoutesById {
   '/shoot-details': typeof ShootDetailsRoute
   '/shoot-manager': typeof ShootManagerRoute
   '/signup': typeof SignupRoute
+  '/verify-booking': typeof VerifyBookingRoute
   '/admin/shoot-editor': typeof AdminShootEditorRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -238,6 +283,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/admin-enquiries'
     | '/booking-confirmed'
     | '/customer-dashboard'
     | '/customer-gallery'
@@ -245,7 +291,10 @@ export interface FileRouteTypes {
     | '/customer-login'
     | '/customer-profile'
     | '/customer-signup'
+    | '/enquiry'
+    | '/enquiry-editor'
     | '/gallery'
+    | '/hero-editor'
     | '/history'
     | '/homestay'
     | '/homestay-editor'
@@ -258,11 +307,13 @@ export interface FileRouteTypes {
     | '/shoot-details'
     | '/shoot-manager'
     | '/signup'
+    | '/verify-booking'
     | '/admin/shoot-editor'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin-enquiries'
     | '/booking-confirmed'
     | '/customer-dashboard'
     | '/customer-gallery'
@@ -270,7 +321,10 @@ export interface FileRouteTypes {
     | '/customer-login'
     | '/customer-profile'
     | '/customer-signup'
+    | '/enquiry'
+    | '/enquiry-editor'
     | '/gallery'
+    | '/hero-editor'
     | '/history'
     | '/homestay'
     | '/homestay-editor'
@@ -283,12 +337,14 @@ export interface FileRouteTypes {
     | '/shoot-details'
     | '/shoot-manager'
     | '/signup'
+    | '/verify-booking'
     | '/admin/shoot-editor'
     | '/admin'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/admin-enquiries'
     | '/booking-confirmed'
     | '/customer-dashboard'
     | '/customer-gallery'
@@ -296,7 +352,10 @@ export interface FileRouteTypes {
     | '/customer-login'
     | '/customer-profile'
     | '/customer-signup'
+    | '/enquiry'
+    | '/enquiry-editor'
     | '/gallery'
+    | '/hero-editor'
     | '/history'
     | '/homestay'
     | '/homestay-editor'
@@ -309,6 +368,7 @@ export interface FileRouteTypes {
     | '/shoot-details'
     | '/shoot-manager'
     | '/signup'
+    | '/verify-booking'
     | '/admin/shoot-editor'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -316,6 +376,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  AdminEnquiriesRoute: typeof AdminEnquiriesRoute
   BookingConfirmedRoute: typeof BookingConfirmedRoute
   CustomerDashboardRoute: typeof CustomerDashboardRoute
   CustomerGalleryRoute: typeof CustomerGalleryRoute
@@ -323,7 +384,10 @@ export interface RootRouteChildren {
   CustomerLoginRoute: typeof CustomerLoginRoute
   CustomerProfileRoute: typeof CustomerProfileRoute
   CustomerSignupRoute: typeof CustomerSignupRoute
+  EnquiryRoute: typeof EnquiryRoute
+  EnquiryEditorRoute: typeof EnquiryEditorRoute
   GalleryRoute: typeof GalleryRoute
+  HeroEditorRoute: typeof HeroEditorRoute
   HistoryRoute: typeof HistoryRoute
   HomestayRoute: typeof HomestayRoute
   HomestayEditorRoute: typeof HomestayEditorRoute
@@ -336,10 +400,18 @@ export interface RootRouteChildren {
   ShootDetailsRoute: typeof ShootDetailsRoute
   ShootManagerRoute: typeof ShootManagerRoute
   SignupRoute: typeof SignupRoute
+  VerifyBookingRoute: typeof VerifyBookingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/verify-booking': {
+      id: '/verify-booking'
+      path: '/verify-booking'
+      fullPath: '/verify-booking'
+      preLoaderRoute: typeof VerifyBookingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -424,11 +496,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hero-editor': {
+      id: '/hero-editor'
+      path: '/hero-editor'
+      fullPath: '/hero-editor'
+      preLoaderRoute: typeof HeroEditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/gallery': {
       id: '/gallery'
       path: '/gallery'
       fullPath: '/gallery'
       preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/enquiry-editor': {
+      id: '/enquiry-editor'
+      path: '/enquiry-editor'
+      fullPath: '/enquiry-editor'
+      preLoaderRoute: typeof EnquiryEditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/enquiry': {
+      id: '/enquiry'
+      path: '/enquiry'
+      fullPath: '/enquiry'
+      preLoaderRoute: typeof EnquiryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/customer-signup': {
@@ -480,6 +573,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookingConfirmedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin-enquiries': {
+      id: '/admin-enquiries'
+      path: '/admin-enquiries'
+      fullPath: '/admin-enquiries'
+      preLoaderRoute: typeof AdminEnquiriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -526,6 +626,7 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  AdminEnquiriesRoute: AdminEnquiriesRoute,
   BookingConfirmedRoute: BookingConfirmedRoute,
   CustomerDashboardRoute: CustomerDashboardRoute,
   CustomerGalleryRoute: CustomerGalleryRoute,
@@ -533,7 +634,10 @@ const rootRouteChildren: RootRouteChildren = {
   CustomerLoginRoute: CustomerLoginRoute,
   CustomerProfileRoute: CustomerProfileRoute,
   CustomerSignupRoute: CustomerSignupRoute,
+  EnquiryRoute: EnquiryRoute,
+  EnquiryEditorRoute: EnquiryEditorRoute,
   GalleryRoute: GalleryRoute,
+  HeroEditorRoute: HeroEditorRoute,
   HistoryRoute: HistoryRoute,
   HomestayRoute: HomestayRoute,
   HomestayEditorRoute: HomestayEditorRoute,
@@ -546,6 +650,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShootDetailsRoute: ShootDetailsRoute,
   ShootManagerRoute: ShootManagerRoute,
   SignupRoute: SignupRoute,
+  VerifyBookingRoute: VerifyBookingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

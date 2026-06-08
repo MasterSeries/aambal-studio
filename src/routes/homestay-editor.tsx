@@ -8,8 +8,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
-
-
 export const Route = createFileRoute("/homestay-editor")({
   component: HomestayEditor,
 });
@@ -130,186 +128,68 @@ function RangeField({
 }
 
 function ImagePicker({
-  label,
-  value,
-  onChange,
-
+  label, value, onChange,
 }: {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  
+  label: string; value: string; onChange: (val: string) => void;
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
 
-  const fileInputRef =
-    useRef<HTMLInputElement>(null);
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const [uploading, setUploading] =
-    useState(false);
+    setUploading(true);
+    const reader = new FileReader();
 
-  const [progress, setProgress] =
-    useState(0);
-
-async function handleFileChange(
-  e: React.ChangeEvent<HTMLInputElement>
-) {
-
-  const file =
-    e.target.files?.[0];
-
-  if (!file) return;
-
-  setUploading(true);
-
-  const reader =
-    new FileReader();
-
-  reader.onload = (event) => {
-
-    const img =
-      new Image();
-
-    img.onload = () => {
-
-      const canvas =
-        document.createElement(
-          "canvas"
-        );
-
-      const maxWidth = 800;
-
-      const scale =
-        maxWidth / img.width;
-
-      canvas.width =
-        maxWidth;
-
-      canvas.height =
-        img.height * scale;
-
-      const ctx =
-        canvas.getContext("2d");
-
-      ctx?.drawImage(
-        img,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      const compressed =
-        canvas.toDataURL(
-          "image/jpeg",
-          0.5
-        );
-
-      onChange(compressed);
-
-      setUploading(false);
-
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxWidth = 800;
+        const scale = maxWidth / img.width;
+        canvas.width = maxWidth;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressed = canvas.toDataURL("image/jpeg", 0.5);
+        onChange(compressed);
+        setUploading(false);
+      };
+      img.src = event.target?.result as string;
     };
-
-    img.src =
-      event.target?.result as string;
-
-  };
-
-  reader.readAsDataURL(file);
-
-}
-
-
+    reader.readAsDataURL(file);
+  }
 
   return (
-
     <div className="field-group">
-
-      <label className="field-label">
-        {label}
-      </label>
-
+      <label className="field-label">{label}</label>
       {value ? (
-
         <div className="img-preview-wrap">
-
-          <img
-            src={value}
-            alt="Preview"
-            className="img-preview-img"
-          />
-
+          <img src={value} alt="Preview" className="img-preview-img" />
           <div className="img-preview-actions">
-
-            <button
-              type="button"
-              className="img-action-btn"
-              onClick={() =>
-                fileInputRef.current?.click()
-              }
-            >
-              {uploading
-                ? `Uploading ${progress}%`
-                : "Change"}
+            <button type="button" className="img-action-btn" onClick={() => fileInputRef.current?.click()}>
+              {uploading ? `Uploading ${progress}%` : "Change"}
             </button>
-
-            <button
-              type="button"
-              className="img-action-btn danger"
-              onClick={() =>
-                onChange("")
-              }
-            >
+            <button type="button" className="img-action-btn danger" onClick={() => onChange("")}>
               Remove
             </button>
-
           </div>
-
         </div>
-
       ) : (
-
-        <div
-          className="img-upload"
-          onClick={() =>
-            fileInputRef.current?.click()
-          }
-        >
-
-          <i
-            className="ti ti-upload img-upload-icon"
-            aria-hidden="true"
-          />
-
-          <div className="img-upload-text">
-            {uploading
-              ? `Uploading ${progress}%`
-              : "Click to upload image"}
-          </div>
-
-          <div className="img-upload-hint">
-            JPG, PNG, WebP
-          </div>
-
+        <div className="img-upload" onClick={() => fileInputRef.current?.click()}>
+          <i className="ti ti-upload img-upload-icon" aria-hidden="true" />
+          <div className="img-upload-text">{uploading ? `Uploading ${progress}%` : "Click to upload image"}</div>
+          <div className="img-upload-hint">JPG, PNG, WebP</div>
         </div>
-
       )}
-
-      <input
-        type="file"
-        accept="image/*"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        style={{ display: "none" }}
-      />
-
+      <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} style={{ display: "none" }} />
     </div>
-
   );
-
 }
 
-  function SubHeading({ children }: { children: React.ReactNode }) {
+function SubHeading({ children }: { children: React.ReactNode }) {
   return <div className="sub-heading">{children}</div>;
 }
 
@@ -321,6 +201,128 @@ function HintBadge({ children }: { children: React.ReactNode }) {
   return <div className="hint-badge">{children}</div>;
 }
 
+// ── NEW: Visual Drag & Drop Hotspot Editor ──────────────────────────────────
+// ── NEW: Visual Drag & Drop Hotspot Editor ──────────────────────────────────
+function VisualHotspotEditor({
+  image, hotspots, onChange
+}: {
+  image: string;
+  hotspots: { label: string; top: number; left: number }[];
+  onChange: (idx: number, pos: { top: number; left: number }) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  const [localSpots, setLocalSpots] = useState(hotspots);
+
+  // Keep local state in sync when external data loads, but NOT while dragging
+  useEffect(() => {
+    if (draggingIdx === null) setLocalSpots(hotspots);
+  }, [hotspots, draggingIdx]);
+
+  // Rock-solid drag implementation using native pointer capture
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>, idx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const target = e.currentTarget;
+    // This forces the browser to send ALL mouse/touch events to this dot, 
+    // even if the cursor leaves the box or the window entirely!
+    target.setPointerCapture(e.pointerId);
+    setDraggingIdx(idx);
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      let x = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+      let y = ((moveEvent.clientY - rect.top) / rect.height) * 100;
+      
+      // Clamp exactly to the 0-100% edges so the dot can't get lost
+      x = Math.max(0, Math.min(100, x));
+      y = Math.max(0, Math.min(100, y));
+
+      setLocalSpots(prev => {
+        const next = [...prev];
+        next[idx] = { ...next[idx], left: Math.round(x), top: Math.round(y) };
+        return next;
+      });
+    };
+
+    const handleUp = (upEvent: PointerEvent) => {
+      // Clean up the listeners and release the mouse lock
+      target.releasePointerCapture(upEvent.pointerId);
+      target.removeEventListener('pointermove', handleMove);
+      target.removeEventListener('pointerup', handleUp);
+      
+      setDraggingIdx(null);
+      
+      // Calculate the final resting position to save securely to Firebase
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      let x = ((upEvent.clientX - rect.left) / rect.width) * 100;
+      let y = ((upEvent.clientY - rect.top) / rect.height) * 100;
+      x = Math.max(0, Math.min(100, x));
+      y = Math.max(0, Math.min(100, y));
+
+      onChange(idx, { top: Math.round(y), left: Math.round(x) });
+    };
+
+    // Attach native DOM listeners directly to the target
+    target.addEventListener('pointermove', handleMove);
+    target.addEventListener('pointerup', handleUp);
+  };
+
+  return (
+    <div className="field-group" style={{ marginTop: 8 }}>
+      <label className="field-label">Position Hotspots (Drag dots)</label>
+      <div
+        ref={containerRef}
+        style={{
+          position: "relative", width: "100%", aspectRatio: "16/9",
+          backgroundColor: "#1a1b1d", backgroundImage: image ? `url(${image})` : "none",
+          backgroundSize: "cover", backgroundPosition: "center",
+          borderRadius: "6px", border: "0.5px solid var(--clr-border-secondary)",
+          overflow: "hidden", touchAction: "none"
+        }}
+      >
+        {localSpots.map((h, i) => (
+          <div
+            key={i}
+            onPointerDown={(e) => handlePointerDown(e, i)}
+            style={{
+              position: "absolute", left: `${h.left}%`, top: `${h.top}%`,
+              transform: "translate(-50%, -50%)",
+              cursor: draggingIdx === i ? "grabbing" : "grab",
+              zIndex: draggingIdx === i ? 10 : 1,
+              display: "flex", flexDirection: "column", alignItems: "center"
+            }}
+          >
+            <div style={{
+              backgroundColor: "rgba(255,255,255,0.9)", color: "#000",
+              fontSize: "9px", fontWeight: 600, padding: "2px 6px",
+              borderRadius: "100px", marginBottom: "4px", whiteSpace: "nowrap",
+              pointerEvents: "none", boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+              maxWidth: "100px", overflow: "hidden", textOverflow: "ellipsis" // Prevents massive text overflow
+            }}>
+              {h.label || `Hotspot ${i+1}`}
+            </div>
+            <div style={{
+              width: "14px", height: "14px", backgroundColor: "#fff",
+              borderRadius: "50%",
+              boxShadow: draggingIdx === i 
+                ? "0 0 0 4px rgba(255,255,255,0.5), 0 4px 10px rgba(0,0,0,0.5)" 
+                : "0 0 0 3px rgba(255,255,255,0.3), 0 2px 6px rgba(0,0,0,0.4)"
+            }} />
+          </div>
+        ))}
+        {!image && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#8c9196", fontSize: "10px" }}>
+            Upload a room image to preview hotspots
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION LIST
 // ─────────────────────────────────────────────────────────────────────────────
@@ -365,10 +367,10 @@ const DEFAULTS: Record<string, any> = {
   // Rooms
   roomsLabel:   "Accommodation",
   roomsHeading: "Seven rooms, seven stories.",
-  room1Name: "Lotus Suite",          room1Tagline: "Pond-facing · King bed",          room1Price: "₹8,500 / night", room1Icon: "🪷", room1Accent: "#4a9460", room1Image: "",
-  room2Name: "Temple View Room",     room2Tagline: "Temple-facing · Queen bed",        room2Price: "₹6,500 / night", room2Icon: "🛕", room2Accent: "#c8a84a", room2Image: "",
-  room3Name: "Garden Cottage",       room3Tagline: "Private garden · Twin or King",    room3Price: "₹5,500 / night", room3Icon: "🌿", room3Accent: "#6db87a", room3Image: "",
-  room4Name: "Photographer's Studio",room4Tagline: "Edit suite · North light",         room4Price: "₹7,200 / night", room4Icon: "📸", room4Accent: "#a78bfa", room4Image: "",
+  room1Name: "Lotus Suite",          room1Tagline: "Pond-facing · King bed",          room1Price: "₹8,500 / night", room1Icon: "🪷", room1Accent: "#4a9460", room1Image: "", room1Features: "King size bed\nPrivate balcony over lotus pond\nClaw-foot soaking tub\nComplimentary breakfast",
+  room2Name: "Temple View Room",     room2Tagline: "Temple-facing · Queen bed",        room2Price: "₹6,500 / night", room2Icon: "🛕", room2Accent: "#c8a84a", room2Image: "", room2Features: "Queen bed with heritage frame\nFloor-to-ceiling temple view\nRainfall shower\nEvening lamp ritual included",
+  room3Name: "Garden Cottage",       room3Tagline: "Private garden · Twin or King",    room3Price: "₹5,500 / night", room3Icon: "🌿", room3Accent: "#6db87a", room3Image: "", room3Features: "Twin or King configuration\nPrivate walled garden\nOutdoor rain shower\nBicycle to festival included",
+  room4Name: "Photographer's Studio",room4Tagline: "Edit suite · North light",         room4Price: "₹7,200 / night", room4Icon: "📸", room4Accent: "#a78bfa", room4Image: "", room4Features: "North-light edit suite\nDual 4K monitor setup\nCalibrated display\nSoundproof walls for audio edit",
   // Amenities
   amenitiesLabel:   "What awaits you",
   amenitiesHeading: "Every morning a\nsmall ceremony.",
@@ -410,9 +412,6 @@ const DEFAULTS: Record<string, any> = {
 // SECTION FIELDS — renders the correct fields for the active section
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Replace the SectionFields function in homestay-editor.tsx with this complete version.
-// All 10 sections are fully editable.
-
 function SectionFields({
   section, data, onChange,
 }: {
@@ -421,6 +420,14 @@ function SectionFields({
   onChange: (k: string, v: any) => void;
 }) {
   const ch = (k: string) => (v: any) => onChange(k, v);
+
+  // Fallback defaults for hotspots if none exist yet
+  const DEFAULT_POSITIONS = [
+    { top: 35, left: 30 },
+    { top: 45, left: 65 },
+    { top: 65, left: 20 },
+    { top: 75, left: 70 },
+  ];
 
   // ── HERO ──────────────────────────────────────────────────────────────────
   if (section === "hero") return (
@@ -484,26 +491,46 @@ function SectionFields({
     </>
   );
 
-  // ── ROOMS ─────────────────────────────────────────────────────────────────
+  // ── ROOMS & HOTSPOTS ──────────────────────────────────────────────────────
   if (section === "rooms") return (
     <>
       <TextInput label="Eyebrow label" value={data.roomsLabel || ""} onChange={ch("roomsLabel")} />
       <TextInput label="Main heading" value={data.roomsHeading || ""} onChange={ch("roomsHeading")} />
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <FieldDivider />
-          <SubHeading>Room {i} — {data[`room${i}Name`] || `Room ${i}`}</SubHeading>
-          <TextInput label="Name" value={data[`room${i}Name`] || ""} onChange={ch(`room${i}Name`)} />
-          <TextInput label="Tagline" value={data[`room${i}Tagline`] || ""} onChange={ch(`room${i}Tagline`)} />
-          <TextInput label="Price" value={data[`room${i}Price`] || ""} onChange={ch(`room${i}Price`)} />
-          <TextInput label="Size" value={data[`room${i}Size`] || ""} onChange={ch(`room${i}Size`)} placeholder="42 sqm" />
-          <TextInput label="Icon (emoji)" value={data[`room${i}Icon`] || ""} onChange={ch(`room${i}Icon`)} />
-          <TextInput label="Badge text" value={data[`room${i}Badge`] || ""} onChange={ch(`room${i}Badge`)} placeholder="Most requested" />
-          <ColorField label="Accent color" value={data[`room${i}Accent`] || "#4a9460"} onChange={ch(`room${i}Accent`)} />
-          <ImagePicker label="Room photo" value={data[`room${i}Image`] || ""} onChange={ch(`room${i}Image`)} />
-          <TextArea label="Features (one per line)" value={data[`room${i}Features`] || ""} onChange={ch(`room${i}Features`)} rows={4} />
-        </div>
-      ))}
+      {[1, 2, 3, 4].map((i) => {
+        // Parse features to build the hotspots array
+        const features = (data[`room${i}Features`] || "").split('\n').filter((f: string) => f.trim() !== "");
+        const mappedHotspots = features.slice(0, 4).map((feat: string, j: number) => ({
+          label: feat,
+          top: data[`room${i}Hotspot${j}Top`] ?? DEFAULT_POSITIONS[j].top,
+          left: data[`room${i}Hotspot${j}Left`] ?? DEFAULT_POSITIONS[j].left
+        }));
+
+        return (
+          <div key={i} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <FieldDivider />
+            <SubHeading>Room {i} — {data[`room${i}Name`] || `Room ${i}`}</SubHeading>
+            <TextInput label="Name" value={data[`room${i}Name`] || ""} onChange={ch(`room${i}Name`)} />
+            <TextInput label="Tagline" value={data[`room${i}Tagline`] || ""} onChange={ch(`room${i}Tagline`)} />
+            <TextInput label="Price" value={data[`room${i}Price`] || ""} onChange={ch(`room${i}Price`)} />
+            <TextInput label="Size" value={data[`room${i}Size`] || ""} onChange={ch(`room${i}Size`)} placeholder="42 sqm" />
+            <TextInput label="Icon (emoji)" value={data[`room${i}Icon`] || ""} onChange={ch(`room${i}Icon`)} />
+            <TextInput label="Badge text" value={data[`room${i}Badge`] || ""} onChange={ch(`room${i}Badge`)} placeholder="Most requested" />
+            <ColorField label="Accent color" value={data[`room${i}Accent`] || "#4a9460"} onChange={ch(`room${i}Accent`)} />
+            <ImagePicker label="Room photo" value={data[`room${i}Image`] || ""} onChange={ch(`room${i}Image`)} />
+            <TextArea label="Features (one per line)" value={data[`room${i}Features`] || ""} onChange={ch(`room${i}Features`)} rows={4} />
+            
+            {/* Visual Drag/Drop Hotspot Editor */}
+            <VisualHotspotEditor 
+              image={data[`room${i}Image`]} 
+              hotspots={mappedHotspots} 
+              onChange={(j, pos) => {
+                ch(`room${i}Hotspot${j}Top`)(pos.top);
+                ch(`room${i}Hotspot${j}Left`)(pos.left);
+              }} 
+            />
+          </div>
+        );
+      })}
     </>
   );
 
@@ -653,6 +680,7 @@ function SectionFields({
 
   return null;
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN EDITOR COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
@@ -686,42 +714,19 @@ export default function HomestayEditor() {
 
   // ── Field change ─────────────────────────────────────────────────────────
   const handleDataChange = useCallback(
-  async (
-    key: string,
-    value: any
-  ) => {
-
-    if (!data) return;
-
-    const updated = {
-      ...data,
-      [key]: value,
-    };
-
-    setData(updated);
-
-    try {
-
-      await setDoc(
-        doc(
-          db,
-          "homestayContent",
-          "main"
-        ),
-        updated
-      );
-
-      setIsDirty(true);
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
-
-  },
-  [data]
-);
+    async (key: string, value: any) => {
+      if (!data) return;
+      const updated = { ...data, [key]: value };
+      setData(updated);
+      try {
+        await setDoc(doc(db, "homestayContent", "main"), updated);
+        setIsDirty(true);
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [data]
+  );
 
   // ── Save ─────────────────────────────────────────────────────────────────
   async function save() {
@@ -748,13 +753,11 @@ export default function HomestayEditor() {
 
   // ── Two-way iframe <-> editor messaging ──────────────────────────────────
   useEffect(() => {
-    // Tell the iframe which section to scroll to
     if (iframeRef.current?.contentWindow) {
       iframeRef.current.contentWindow.postMessage(
         { type: "SCROLL_TO_SECTION", section: activeSection }, "*"
       );
     }
-    // Listen for clicks inside the iframe
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === "SELECT_SECTION") {
         setActiveSection(event.data.section);
@@ -781,10 +784,7 @@ export default function HomestayEditor() {
 
   return (
     <>
-      <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"
-      />
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
       <style>{EDITOR_CSS}</style>
 
       <div className="admin-shell">
@@ -792,15 +792,8 @@ export default function HomestayEditor() {
         {/* ── SIDEBAR ── */}
         <div className="sidebar">
           <div className="sidebar-header">
-            <Link
-              to="/homestay"
-              style={{ color: "inherit", textDecoration: "none", display: "flex", alignItems: "center" }}
-            >
-              <i
-                className="ti ti-arrow-left"
-                style={{ fontSize: 13, color: "var(--clr-muted)", cursor: "pointer" }}
-                aria-hidden="true"
-              />
+            <Link to="/homestay" style={{ color: "inherit", textDecoration: "none", display: "flex", alignItems: "center" }}>
+              <i className="ti ti-arrow-left" style={{ fontSize: 13, color: "var(--clr-muted)", cursor: "pointer" }} aria-hidden="true" />
             </Link>
             <div className="sidebar-logo">A</div>
             <div>
@@ -813,11 +806,7 @@ export default function HomestayEditor() {
 
           <div className="sections-list">
             {SECTIONS.map((sec) => (
-              <div
-                key={sec.id}
-                className={`section-item ${activeSection === sec.id ? "active" : ""}`}
-                onClick={() => setActiveSection(sec.id)}
-              >
+              <div key={sec.id} className={`section-item ${activeSection === sec.id ? "active" : ""}`} onClick={() => setActiveSection(sec.id)}>
                 <i className="ti ti-drag-drop drag-handle" aria-hidden="true" />
                 <i className={`ti ${sec.icon} sec-icon`} aria-hidden="true" />
                 <span className="sec-label">{sec.label}</span>
@@ -851,20 +840,12 @@ export default function HomestayEditor() {
           </div>
 
           <div className="panel-body">
-            <SectionFields
-              section={activeSection}
-              data={data}
-              onChange={handleDataChange}
-            />
+            <SectionFields section={activeSection} data={data} onChange={handleDataChange} />
           </div>
 
           <div className="panel-footer">
             <button className="btn-reset" onClick={discard}>Discard</button>
-            <button
-              className="btn-save"
-              onClick={save}
-              disabled={saving || !isDirty}
-            >
+            <button className="btn-save" onClick={save} disabled={saving || !isDirty}>
               {saving ? "Saving…" : "Save section"}
             </button>
           </div>
@@ -876,12 +857,7 @@ export default function HomestayEditor() {
             <span className="preview-label">Preview</span>
             <div className="device-btns">
               {(["desktop", "tablet", "mobile"] as const).map((d) => (
-                <button
-                  key={d}
-                  className={`device-btn ${device === d ? "active" : ""}`}
-                  onClick={() => setDevice(d)}
-                  title={d}
-                >
+                <button key={d} className={`device-btn ${device === d ? "active" : ""}`} onClick={() => setDevice(d)} title={d}>
                   <i className={`ti ti-device-${d}`} aria-hidden="true" />
                 </button>
               ))}
@@ -891,10 +867,7 @@ export default function HomestayEditor() {
               <button className="btn-preview-ext" title="Open in new tab">
                 <i className="ti ti-external-link" style={{ fontSize: 12 }} aria-hidden="true" />
               </button>
-              <button
-                className="btn-publish"
-                onClick={() => showToast("Published to live site ✓")}
-              >
+              <button className="btn-publish" onClick={() => showToast("Published to live site ✓")}>
                 Publish
               </button>
             </div>
@@ -904,23 +877,14 @@ export default function HomestayEditor() {
             <div
               className="preview-inner"
               style={{
-                maxWidth:
-                  device === "mobile" ? 375
-                  : device === "tablet" ? 768
-                  : "100%",
+                maxWidth: device === "mobile" ? 375 : device === "tablet" ? 768 : "100%",
                 margin: device !== "desktop" ? "0 auto" : "0",
               }}
             >
               <iframe
                 ref={iframeRef}
                 src="/homestay"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  border: "none",
-                  display: "block",
-                  minHeight: "100vh",
-                }}
+                style={{ width: "100%", height: "100%", border: "none", display: "block", minHeight: "100vh" }}
                 title="Storefront Preview"
               />
             </div>
@@ -980,56 +944,20 @@ const EDITOR_CSS = `
   }
 
   /* ── SIDEBAR ── */
-  .sidebar {
-    background: var(--clr-bg-primary);
-    border-right: 0.5px solid var(--clr-border-tertiary);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .sidebar-header {
-    padding: 12px 14px;
-    border-bottom: 0.5px solid var(--clr-border-tertiary);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-  .sidebar-logo {
-    width: 26px; height: 26px;
-    background: linear-gradient(135deg, #4a9460, #238636);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
-  }
+  .sidebar { background: var(--clr-bg-primary); border-right: 0.5px solid var(--clr-border-tertiary); display: flex; flex-direction: column; overflow: hidden; }
+  .sidebar-header { padding: 12px 14px; border-bottom: 0.5px solid var(--clr-border-tertiary); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .sidebar-logo { width: 26px; height: 26px; background: linear-gradient(135deg, #4a9460, #238636); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
   .sidebar-title   { font-size: 12px; font-weight: 600; color: var(--clr-text-primary); }
   .sidebar-subtitle{ font-size: 10px; color: var(--clr-text-secondary); margin-top: 1px; }
 
-  .sections-label {
-    padding: 10px 14px 4px;
-    font-size: 10px; font-weight: 600;
-    color: var(--clr-text-secondary);
-    letter-spacing: .08em; text-transform: uppercase;
-    flex-shrink: 0;
-  }
-  .sections-list {
-    flex: 1; overflow-y: auto; padding: 4px 8px;
-  }
+  .sections-label { padding: 10px 14px 4px; font-size: 10px; font-weight: 600; color: var(--clr-text-secondary); letter-spacing: .08em; text-transform: uppercase; flex-shrink: 0; }
+  .sections-list { flex: 1; overflow-y: auto; padding: 4px 8px; }
   .sections-list::-webkit-scrollbar { width: 2px; }
   .sections-list::-webkit-scrollbar-thumb { background: var(--clr-border-secondary); border-radius: 2px; }
 
-  .section-item {
-    display: flex; align-items: center; gap: 7px;
-    padding: 7px 10px; border-radius: var(--radius); cursor: pointer;
-    border: 0.5px solid transparent; margin-bottom: 2px;
-    transition: background .12s, border-color .12s;
-    user-select: none;
-  }
+  .section-item { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border-radius: var(--radius); cursor: pointer; border: 0.5px solid transparent; margin-bottom: 2px; transition: background .12s, border-color .12s; user-select: none; }
   .section-item:hover { background: var(--clr-bg-secondary); }
-  .section-item.active {
-    background: var(--clr-bg-info);
-    border-color: var(--clr-border-info);
-  }
+  .section-item.active { background: var(--clr-bg-info); border-color: var(--clr-border-info); }
   .section-item.active .sec-label { color: var(--clr-text-info); }
   .section-item.active .sec-icon  { color: var(--clr-text-info); }
 
@@ -1040,112 +968,43 @@ const EDITOR_CSS = `
   .sec-eye     { font-size: 12px; color: var(--clr-text-secondary); opacity: 0; transition: opacity .15s; }
   .section-item:hover .sec-eye { opacity: 1; }
 
-  .add-section-btn {
-    display: flex; align-items: center; gap: 6px;
-    padding: 7px 10px; border-radius: var(--radius);
-    border: 0.5px dashed var(--clr-border-secondary);
-    background: none; width: 100%;
-    color: var(--clr-text-secondary); font-size: 11px; cursor: pointer;
-    transition: background .12s;
-    font-family: var(--font-sans);
-  }
+  .add-section-btn { display: flex; align-items: center; gap: 6px; padding: 7px 10px; border-radius: var(--radius); border: 0.5px dashed var(--clr-border-secondary); background: none; width: 100%; color: var(--clr-text-secondary); font-size: 11px; cursor: pointer; transition: background .12s; font-family: var(--font-sans); }
   .add-section-btn:hover { background: var(--clr-bg-secondary); color: var(--clr-text-primary); }
 
-  .sidebar-footer {
-    padding: 10px 12px;
-    border-top: 0.5px solid var(--clr-border-tertiary);
-    flex-shrink: 0;
-  }
-  .live-badge {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 10px; background: var(--clr-bg-secondary);
-    border-radius: var(--radius);
-    font-size: 11px; color: var(--clr-text-secondary);
-  }
-  .live-dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #3fb950; flex-shrink: 0;
-    box-shadow: 0 0 6px #3fb95060;
-    transition: background .3s;
-  }
+  .sidebar-footer { padding: 10px 12px; border-top: 0.5px solid var(--clr-border-tertiary); flex-shrink: 0; }
+  .live-badge { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--clr-bg-secondary); border-radius: var(--radius); font-size: 11px; color: var(--clr-text-secondary); }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; flex-shrink: 0; box-shadow: 0 0 6px #3fb95060; transition: background .3s; }
   .live-dot.dirty { background: #e3b341; box-shadow: 0 0 6px #e3b34160; }
 
   /* ── EDITOR PANEL ── */
-  .editor-panel {
-    background: var(--clr-bg-primary);
-    border-right: 0.5px solid var(--clr-border-tertiary);
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  .panel-header {
-    padding: 12px 16px;
-    border-bottom: 0.5px solid var(--clr-border-tertiary);
-    display: flex; align-items: center; justify-content: space-between;
-    flex-shrink: 0;
-  }
+  .editor-panel { background: var(--clr-bg-primary); border-right: 0.5px solid var(--clr-border-tertiary); display: flex; flex-direction: column; overflow: hidden; }
+  .panel-header { padding: 12px 16px; border-bottom: 0.5px solid var(--clr-border-tertiary); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .panel-title { font-size: 13px; font-weight: 600; color: var(--clr-text-primary); }
-  .panel-action-btn {
-    padding: 3px 8px; font-size: 10px;
-    border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius);
-    background: none; cursor: pointer; color: var(--clr-text-secondary);
-    transition: background .12s, color .12s; font-family: var(--font-sans);
-  }
+  .panel-action-btn { padding: 3px 8px; font-size: 10px; border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius); background: none; cursor: pointer; color: var(--clr-text-secondary); transition: background .12s, color .12s; font-family: var(--font-sans); }
   .panel-action-btn:hover { background: var(--clr-bg-secondary); color: var(--clr-text-primary); }
   .panel-action-btn.danger { color: var(--clr-text-danger); }
   .panel-action-btn.danger:hover { background: rgba(248,81,73,.08); }
 
-  .panel-body {
-    flex: 1; overflow-y: auto; padding: 16px;
-    display: flex; flex-direction: column; gap: 16px;
-  }
+  .panel-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
   .panel-body::-webkit-scrollbar { width: 2px; }
   .panel-body::-webkit-scrollbar-thumb { background: var(--clr-border-secondary); }
 
-  .panel-footer {
-    padding: 12px 16px;
-    border-top: 0.5px solid var(--clr-border-tertiary);
-    display: flex; gap: 8px; flex-shrink: 0;
-  }
-  .btn-reset {
-    padding: 7px 12px; font-size: 12px;
-    color: var(--clr-text-secondary); background: none;
-    border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius);
-    cursor: pointer; transition: background .12s; font-family: var(--font-sans);
-  }
+  .panel-footer { padding: 12px 16px; border-top: 0.5px solid var(--clr-border-tertiary); display: flex; gap: 8px; flex-shrink: 0; }
+  .btn-reset { padding: 7px 12px; font-size: 12px; color: var(--clr-text-secondary); background: none; border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius); cursor: pointer; transition: background .12s; font-family: var(--font-sans); }
   .btn-reset:hover { background: var(--clr-bg-secondary); }
-  .btn-save {
-    flex: 1; padding: 8px; font-size: 12px; font-weight: 600;
-    background: var(--clr-green); border: none; border-radius: var(--radius);
-    color: #fff; cursor: pointer; transition: background .15s; font-family: var(--font-sans);
-  }
+  .btn-save { flex: 1; padding: 8px; font-size: 12px; font-weight: 600; background: var(--clr-green); border: none; border-radius: var(--radius); color: #fff; cursor: pointer; transition: background .15s; font-family: var(--font-sans); }
   .btn-save:hover:not(:disabled) { background: var(--clr-green2); }
-  .btn-save:disabled {
-    background: var(--clr-bg-secondary);
-    color: var(--clr-text-secondary); cursor: not-allowed;
-  }
+  .btn-save:disabled { background: var(--clr-bg-secondary); color: var(--clr-text-secondary); cursor: not-allowed; }
 
   /* ── FIELD TYPES ── */
   .field-group { display: flex; flex-direction: column; gap: 6px; }
-  .field-label {
-    font-size: 10px; font-weight: 600; color: var(--clr-text-secondary);
-    text-transform: uppercase; letter-spacing: .07em;
-  }
-  .field-input {
-    font-size: 12px; padding: 7px 9px;
-    border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius);
-    background: var(--clr-bg-secondary); color: var(--clr-text-primary);
-    width: 100%; font-family: var(--font-sans);
-    resize: none; outline: none;
-    transition: border-color .15s;
-  }
+  .field-label { font-size: 10px; font-weight: 600; color: var(--clr-text-secondary); text-transform: uppercase; letter-spacing: .07em; }
+  .field-input { font-size: 12px; padding: 7px 9px; border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius); background: var(--clr-bg-secondary); color: var(--clr-text-primary); width: 100%; font-family: var(--font-sans); resize: none; outline: none; transition: border-color .15s; }
   .field-input:focus { border-color: var(--clr-border-primary); }
   .field-textarea { min-height: 72px; line-height: 1.55; }
 
   .color-row { display: flex; gap: 7px; align-items: center; }
-  .color-swatch {
-    width: 32px; height: 32px; border-radius: var(--radius);
-    border: 0.5px solid var(--clr-border-secondary); cursor: pointer;
-    padding: 2px; background: none; flex-shrink: 0;
-  }
+  .color-swatch { width: 32px; height: 32px; border-radius: var(--radius); border: 0.5px solid var(--clr-border-secondary); cursor: pointer; padding: 2px; background: none; flex-shrink: 0; }
   .color-swatch::-webkit-color-swatch-wrapper { padding: 0; border-radius: 4px; }
   .color-swatch::-webkit-color-swatch { border: none; border-radius: 4px; }
 
@@ -1153,28 +1012,15 @@ const EDITOR_CSS = `
   .range-input { flex: 1; cursor: pointer; accent-color: var(--clr-accent); }
   .range-val { font-size: 11px; color: var(--clr-text-secondary); width: 34px; text-align: right; flex-shrink: 0; }
 
-  .img-preview-wrap {
-    border: 0.5px solid var(--clr-border-secondary);
-    border-radius: var(--radius); overflow: hidden;
-    background: var(--clr-bg-secondary);
-  }
+  .img-preview-wrap { border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius); overflow: hidden; background: var(--clr-bg-secondary); }
   .img-preview-img { width: 100%; height: 110px; object-fit: cover; display: block; }
   .img-preview-actions { display: flex; border-top: 0.5px solid var(--clr-border-secondary); }
-  .img-action-btn {
-    flex: 1; padding: 7px; background: transparent; border: none;
-    color: var(--clr-text-primary); cursor: pointer; font-size: 11px;
-    transition: background .12s; font-family: var(--font-sans);
-  }
+  .img-action-btn { flex: 1; padding: 7px; background: transparent; border: none; color: var(--clr-text-primary); cursor: pointer; font-size: 11px; transition: background .12s; font-family: var(--font-sans); }
   .img-action-btn:hover { background: var(--clr-bg-primary); }
   .img-action-btn.danger { color: var(--clr-text-danger); }
   .img-action-btn + .img-action-btn { border-left: 0.5px solid var(--clr-border-secondary); }
 
-  .img-upload {
-    border: 1px dashed var(--clr-border-secondary); border-radius: var(--radius);
-    padding: 18px 10px; text-align: center; cursor: pointer;
-    background: var(--clr-bg-secondary); transition: border-color .2s;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-  }
+  .img-upload { border: 1px dashed var(--clr-border-secondary); border-radius: var(--radius); padding: 18px 10px; text-align: center; cursor: pointer; background: var(--clr-bg-secondary); transition: border-color .2s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .img-upload:hover { border-color: var(--clr-border-primary); }
   .img-upload-icon { font-size: 20px; color: var(--clr-text-secondary); }
   .img-upload-text { font-size: 11px; color: var(--clr-text-secondary); }
@@ -1182,100 +1028,33 @@ const EDITOR_CSS = `
 
   .toggle-row { display: flex; align-items: center; justify-content: space-between; }
   .toggle-label { font-size: 12px; color: var(--clr-text-primary); }
-  .toggle {
-    width: 36px; height: 20px; border-radius: 10px;
-    background: var(--clr-bg-secondary);
-    border: 0.5px solid var(--clr-border-secondary);
-    cursor: pointer; position: relative;
-    transition: background .2s, border-color .2s; flex-shrink: 0;
-  }
+  .toggle { width: 36px; height: 20px; border-radius: 10px; background: var(--clr-bg-secondary); border: 0.5px solid var(--clr-border-secondary); cursor: pointer; position: relative; transition: background .2s, border-color .2s; flex-shrink: 0; }
   .toggle.on { background: #1D9E75; border-color: #0F6E56; }
-  .toggle-dot {
-    width: 14px; height: 14px; border-radius: 50%; background: #fff;
-    position: absolute; top: 2px; left: 3px;
-    transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.25);
-  }
+  .toggle-dot { width: 14px; height: 14px; border-radius: 50%; background: #fff; position: absolute; top: 2px; left: 3px; transition: left .2s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
   .toggle.on .toggle-dot { left: 19px; }
 
-  .sub-heading {
-    font-size: 10px; font-weight: 600; color: var(--clr-text-secondary);
-    text-transform: uppercase; letter-spacing: .07em;
-    padding: 4px 0; border-bottom: 0.5px solid var(--clr-border-tertiary);
-    margin-top: 4px;
-  }
+  .sub-heading { font-size: 10px; font-weight: 600; color: var(--clr-text-secondary); text-transform: uppercase; letter-spacing: .07em; padding: 4px 0; border-bottom: 0.5px solid var(--clr-border-tertiary); margin-top: 4px; }
   .divider { height: 0.5px; background: var(--clr-border-tertiary); }
-  .hint-badge {
-    font-size: 10px; color: var(--clr-text-info);
-    background: var(--clr-bg-info);
-    border: 0.5px solid var(--clr-border-info);
-    border-radius: var(--radius); padding: 6px 9px; line-height: 1.5;
-  }
+  .hint-badge { font-size: 10px; color: var(--clr-text-info); background: var(--clr-bg-info); border: 0.5px solid var(--clr-border-info); border-radius: var(--radius); padding: 6px 9px; line-height: 1.5; }
 
   /* ── PREVIEW PANE ── */
-  .preview-pane {
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-  .preview-toolbar {
-    padding: 10px 14px;
-    border-bottom: 0.5px solid var(--clr-border-tertiary);
-    background: var(--clr-bg-primary);
-    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
-  }
-  .preview-label {
-    font-size: 10px; font-weight: 600; color: var(--clr-text-secondary);
-    text-transform: uppercase; letter-spacing: .07em;
-  }
+  .preview-pane { display: flex; flex-direction: column; overflow: hidden; }
+  .preview-toolbar { padding: 10px 14px; border-bottom: 0.5px solid var(--clr-border-tertiary); background: var(--clr-bg-primary); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .preview-label { font-size: 10px; font-weight: 600; color: var(--clr-text-secondary); text-transform: uppercase; letter-spacing: .07em; }
   .device-btns { display: flex; gap: 3px; }
-  .device-btn {
-    padding: 4px 9px; font-size: 12px;
-    border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius);
-    background: none; cursor: pointer; color: var(--clr-text-secondary);
-    transition: background .12s, color .12s;
-  }
-  .device-btn.active {
-    background: var(--clr-bg-secondary);
-    color: var(--clr-text-primary);
-    border-color: var(--clr-border-primary);
-  }
-  .preview-url {
-    flex: 1; background: var(--clr-bg-secondary);
-    border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius);
-    padding: 5px 10px; font-size: 11px; color: var(--clr-text-secondary);
-    font-family: var(--font-mono);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
+  .device-btn { padding: 4px 9px; font-size: 12px; border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius); background: none; cursor: pointer; color: var(--clr-text-secondary); transition: background .12s, color .12s; }
+  .device-btn.active { background: var(--clr-bg-secondary); color: var(--clr-text-primary); border-color: var(--clr-border-primary); }
+  .preview-url { flex: 1; background: var(--clr-bg-secondary); border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius); padding: 5px 10px; font-size: 11px; color: var(--clr-text-secondary); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .preview-actions { display: flex; gap: 6px; }
-  .btn-publish {
-    padding: 5px 14px; font-size: 11px; font-weight: 600;
-    background: var(--clr-accent); border: none; border-radius: var(--radius);
-    color: #fff; cursor: pointer; transition: background .15s; font-family: var(--font-sans);
-  }
+  .btn-publish { padding: 5px 14px; font-size: 11px; font-weight: 600; background: var(--clr-accent); border: none; border-radius: var(--radius); color: #fff; cursor: pointer; transition: background .15s; font-family: var(--font-sans); }
   .btn-publish:hover { background: var(--clr-green2); }
-  .btn-preview-ext {
-    padding: 5px 9px; font-size: 11px;
-    border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius);
-    background: none; cursor: pointer; color: var(--clr-text-secondary);
-    transition: background .12s;
-  }
+  .btn-preview-ext { padding: 5px 9px; font-size: 11px; border: 0.5px solid var(--clr-border-secondary); border-radius: var(--radius); background: none; cursor: pointer; color: var(--clr-text-secondary); transition: background .12s; }
   .btn-preview-ext:hover { background: var(--clr-bg-secondary); }
 
-  .preview-frame {
-    flex: 1; overflow-y: auto; background: #040d08;
-    display: flex; justify-content: center;
-  }
-  .preview-inner {
-    width: 100%; overflow: hidden;
-    transition: max-width .3s ease;
-    display: flex; flex-direction: column;
-  }
+  .preview-frame { flex: 1; overflow-y: auto; background: #040d08; display: flex; justify-content: center; }
+  .preview-inner { width: 100%; overflow: hidden; transition: max-width .3s ease; display: flex; flex-direction: column; }
 
   /* ── TOAST ── */
-  .saved-toast {
-    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-    background: #1D9E75; color: #fff; font-size: 11px; font-weight: 500;
-    padding: 7px 18px; border-radius: 100px;
-    opacity: 0; pointer-events: none; transition: opacity .3s;
-    z-index: 9999; white-space: nowrap; font-family: var(--font-sans);
-  }
+  .saved-toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #1D9E75; color: #fff; font-size: 11px; font-weight: 500; padding: 7px 18px; border-radius: 100px; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 9999; white-space: nowrap; font-family: var(--font-sans); }
   .saved-toast.show { opacity: 1; }
 `;

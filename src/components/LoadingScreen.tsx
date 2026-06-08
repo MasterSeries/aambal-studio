@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "motion/react";
 import { useEffect, useState } from "react";
+import logo from "@/assets/logo.png";
 
 const stats = [
   { n: "30+", l: "Years of craft" },
@@ -83,16 +84,7 @@ export function LoadingScreen({ onComplete }: { onComplete?: () => void }) {
               </svg>
             </motion.div>
 
-            {/* Monogram */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.6 }}
-              className="w-16 h-16 rounded-2xl flex items-center justify-center font-black text-2xl text-[#0a0a14]"
-              style={{ background: "linear-gradient(135deg, #c8a84a, #ffd93d)", boxShadow: "0 0 0 8px rgba(200,168,74,0.08), 0 0 0 16px rgba(200,168,74,0.04)" }}
-            >
-              S
-            </motion.div>
+           
 
             {/* Name */}
             <motion.div
@@ -101,8 +93,14 @@ export function LoadingScreen({ onComplete }: { onComplete?: () => void }) {
               transition={{ delay: 0.3, duration: 0.6 }}
               className="flex flex-col items-center gap-1"
             >
-              <h1 className="font-display text-[40px] text-white leading-none tracking-tight">Studio Hut</h1>
-              <p className="font-display text-lg italic" style={{ color: "rgba(200,168,74,0.75)" }}>Photography</p>
+              <img
+  src={logo}
+  alt="Aambal Vasantham Studio"
+  className="h-24 w-auto object-contain"
+  style={{
+    filter: "drop-shadow(0 0 20px rgba(200,168,74,0.25))",
+  }}
+/>
               <p className="text-[10px] font-mono uppercase tracking-[0.32em] text-white/20 mt-1">Kottayam · Kerala · Est. 1994</p>
             </motion.div>
 

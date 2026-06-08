@@ -1,5 +1,7 @@
 import { motion } from "motion/react";
 import studioBg from "@/assets/studio-intro.jpeg";
+import logo from "@/assets/logo.png";
+
 
 export function StudioIntroSection() {
   return (
@@ -51,36 +53,66 @@ export function StudioIntroSection() {
       ))}
 
       {/* Main content */}
-      <div className="relative z-10 mx-auto max-w-5xl px-6 text-center">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-28 text-center">
         {/* Top label */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="mb-6 inline-flex items-center gap-3 rounded-full border border-primary/30 bg-background/30 px-5 py-2 text-xs uppercase tracking-[0.35em] text-primary backdrop-blur"
-        >
-          <span className="h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
-          Est. 1996 · Madurai, Tamil Nadu
-        </motion.div>
+  initial={{ opacity: 0, y: -20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.8, delay: 0.2 }}
+  className="mb-16 flex justify-center"
+>
+ <div
+  className="flex items-center gap-3 rounded-full px-6 py-3"
+  style={{
+    background: "rgba(15,15,15,0.85)",
+    border: "1px solid rgba(212,175,55,0.35)",
+    backdropFilter: "blur(20px)",
+    color: "#ffffff",
+    letterSpacing: "0.25em",
+    fontSize: "12px",
+    textTransform: "uppercase",
+    boxShadow: "0 0 30px rgba(212,175,55,0.2)",
+  }}
+
+  >
+    <span
+      style={{
+        width: "8px",
+        height: "8px",
+        borderRadius: "999px",
+        background: "#22c55e",
+        boxShadow: "0 0 12px #22c55e",
+      }}
+    />
+    Est. 1996 • Kottayam, Kerala
+  </div>
+</motion.div>
 
         {/* Studio name */}
-        <motion.h1
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.6 }}
-          className="font-display text-6xl leading-[1.05] sm:text-7xl md:text-8xl lg:text-9xl"
-        >
-          Studio Hut
-          <br />
-          <span className="italic text-gradient-gold">Photography</span>
-        </motion.h1>
+        {/* Studio Logo */}
+<motion.div
+  initial={{ opacity: 0, y: 40 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 1, delay: 0.6 }}
+  className="flex justify-center"
+>
+  <img
+    src={logo}
+    alt="Aambal Vasantham Studio"
+    className="w-[280px] sm:w-[380px] md:w-[500px] h-auto object-contain"
+    style={{
+      filter:
+        "drop-shadow(0 0 20px rgba(255,255,255,0.15)) drop-shadow(0 0 40px rgba(200,168,74,0.25))",
+    }}
+  />
+</motion.div>
 
         {/* Tagline */}
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 1 }}
-          className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl"
+          className="mx-auto mt-10 max-w-3xl text-lg text-white/80 md:text-2xl leading-relaxed"
         >
           Three decades of capturing light, love, and the soul of South Indian
           celebrations. From film to 4K — we remember every frame.
