@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { doc, getDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
 
 export const Route = createFileRoute("/booking-confirmed")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -179,20 +177,35 @@ export default function MainBookingApp() {
 
     setIsSubmitting(true);
     const bookingReference = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
+    const pkgName = selectedPlan?.name || planId || "Premium Package";
+    const pkgPrice = selectedPlan?.price || "Custom Rate";
 
     const operationalPayload = {
+      // Modern Fields
       referenceId: bookingReference,
-      packageName: selectedPlan?.name || planId || "Premium Package",
-      packagePrice: selectedPlan?.price || "Custom Rate",
-      date: selectedDate,
-      time: selectedTime,
       clientName: name,
       clientPhone: phone,
       clientEmail: email,
+      packageName: pkgName,
+      packagePrice: pkgPrice,
+      
+      // Legacy support for older components
+      reference: bookingReference,
+      name: name,
+      phone: phone,
+      email: email,
+      package: pkgName,
+      price: pkgPrice,
+
+      // Core details
+      date: selectedDate,
+      time: selectedTime,
       partnerName: partnerName || null,
       partnerPhone: partnerPhone || null,
-      status: "pending", // ALways pending until Admin approves
-      createdTimestamp: serverTimestamp(),
+      status: "pending", 
+      
+      // FIX: Use createdAt so it appears in Admin Dashboard
+      createdAt: serverTimestamp(),
     };
 
     try {
@@ -202,8 +215,6 @@ export default function MainBookingApp() {
       const baseUrl = window.location.origin;
       const verificationUrl = `${baseUrl}/verify-booking?ref=${bookingReference}`;
       const qrEndpoint = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verificationUrl)}`;
-
-      // Notice: We NO LONGER send WhatsApp here. The Admin Panel sends it upon Approval.
 
       setConfirmedBooking({ ...operationalPayload, qrUrl: qrEndpoint });
       setStep(3); // Progress to pending processing screen
