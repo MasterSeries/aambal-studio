@@ -56,38 +56,74 @@ export default function CustomerDashboard() {
   const [newDate, setNewDate] = useState("");
   const [newSlots, setNewSlots] = useState("");
 
-  // ── FIREBASE FETCH LOGIC ──
+  // ── SAFE FIREBASE FETCH LOGIC ──
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
-      if (!user) { window.location.href = "/customer-login"; return; }
+      if (!user) { 
+        window.location.href = "/customer-login"; 
+        return; 
+      }
+      
       setUserName(user.displayName || "Guest");
-      setUserEmail(user.email || "");
-      
-      const q = query(collection(db, "bookings"), where("clientEmail", "==", user.email));
-      
-      const unsubBookings = onSnapshot(q, (snap) => {
-        const data: any[] = [];
-        snap.forEach((d) => data.push({ id: d.id, ...d.data() }));
+      const emailToSearch = user.email || "";
+      setUserEmail(emailToSearch);
+
+      // If user has no email, stop loading and show empty dashboard
+      if (!emailToSearch) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const q = query(collection(db, "bookings"), where("clientEmail", "==", emailToSearch));
         
-        if(data.length === 0) {
-           const legacyQ = query(collection(db, "bookings"), where("email", "==", user.email));
-           getDocs(legacyQ).then((legacySnap: any) => {
+        const unsubBookings = onSnapshot(q, async (snap) => {
+          try {
+            const data: any[] = [];
+            snap.forEach((d) => data.push({ id: d.id, ...d.data() }));
+            
+            if(data.length === 0) {
+              const legacyQ = query(collection(db, "bookings"), where("email", "==", emailToSearch));
+              const legacySnap = await getDocs(legacyQ);
               const legacyData: any[] = [];
               legacySnap.forEach((ld: any) => legacyData.push({ id: ld.id, ...ld.data() }));
               
-              // Sort by date (newest first)
-              legacyData.sort((a,b) => new Date(b.createdAt?.toDate() || 0).getTime() - new Date(a.createdAt?.toDate() || 0).getTime());
+              // Safe sort fallback
+              legacyData.sort((a,b) => {
+                const timeA = a.createdAt?.toMillis?.() || 0;
+                const timeB = b.createdAt?.toMillis?.() || 0;
+                return timeB - timeA;
+              });
+              
               setBookings(legacyData);
-              setLoading(false);
-           });
-        } else {
-           data.sort((a,b) => new Date(b.createdTimestamp?.toDate() || b.createdAt?.toDate() || 0).getTime() - new Date(a.createdTimestamp?.toDate() || a.createdAt?.toDate() || 0).getTime());
-           setBookings(data);
-           setLoading(false);
-        }
-      });
-      return () => unsubBookings();
+            } else {
+              // Safe sort new data
+              data.sort((a,b) => {
+                const timeA = a.createdTimestamp?.toMillis?.() || a.createdAt?.toMillis?.() || 0;
+                const timeB = b.createdTimestamp?.toMillis?.() || b.createdAt?.toMillis?.() || 0;
+                return timeB - timeA;
+              });
+              
+              setBookings(data);
+            }
+          } catch (innerErr) {
+            console.error("Error processing bookings:", innerErr);
+          } finally {
+            // ALWAYS turn off the loading spinner
+            setLoading(false);
+          }
+        }, (err) => {
+          console.error("Firestore snapshot error:", err);
+          setLoading(false);
+        });
+        
+        return () => unsubBookings();
+      } catch (err) {
+        console.error("Query Setup Error:", err);
+        setLoading(false);
+      }
     });
+
     return () => unsubAuth();
   }, []);
 
