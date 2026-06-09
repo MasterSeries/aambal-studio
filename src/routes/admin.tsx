@@ -81,13 +81,11 @@ export default function AdminPage() {
     const unsub = onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = "/login"; return; }
       
-      // FIX: Query without orderBy so Firebase doesn't silently drop missing timestamps!
       const q = query(collection(db, "bookings"));
       
       const unsubBookings = onSnapshot(q, (snap) => {
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         
-        // Manual sorting logic to push newest first
         data.sort((a: any, b: any) => {
           const timeA = a.createdAt?.toMillis?.() || a.createdTimestamp?.toMillis?.() || 0;
           const timeB = b.createdAt?.toMillis?.() || b.createdTimestamp?.toMillis?.() || 0;
@@ -102,7 +100,6 @@ export default function AdminPage() {
     return () => unsub();
   }, []);
 
-  // ── UPDATE STATUS AND SEND WHATSAPP CONFIRMATIONS ──
   async function updateStatus(id: string, newStatus: string) {
     try { 
       await updateDoc(doc(db, "bookings", id), { status: newStatus }); 
@@ -141,7 +138,7 @@ export default function AdminPage() {
           }
         }
       }
-      alert(`Status updated to ${newStatus}`);
+      setExpandedId(null); // Auto-close accordion so they don't click it again!
     } catch (err) { 
       console.error(err); 
       alert("Update failed"); 
@@ -211,10 +208,9 @@ export default function AdminPage() {
   const completedCount = bookings.filter(b => b.status === "completed").length;
   const rejectedCount = bookings.filter(b => b.status === "rejected").length;
   
-  // FIX: Safely calculate today's activity supporting both date formats
   const today = new Date();
-  const todayStr1 = today.toDateString(); // "Wed Jun 10 2026"
-  const todayStr2 = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; // "2026-06-10"
+  const todayStr1 = today.toDateString(); 
+  const todayStr2 = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const todayCount = bookings.filter(b => b.date === todayStr1 || b.date === todayStr2).length;
   
   const estimatedRevenue = approvedCount * 5000;
@@ -224,7 +220,6 @@ export default function AdminPage() {
     { name: "Completed", value: completedCount }, { name: "Rejected", value: rejectedCount },
   ];
 
-  // FIX: Safe filtering preventing crashes on missing properties
   const filteredBookings = bookings.filter(b => {
     const searchLower = search.toLowerCase();
     const matchSearch = search === "" || 
@@ -363,10 +358,9 @@ export default function AdminPage() {
                             const clientDisplay = booking.clientName || booking.name || "Unknown Guest";
                             const partnerDisplay = booking.partnerName ? ` + ${booking.partnerName}` : "";
                             
-                            // Safe date rendering
                             let displayDate = booking.date || "No Date";
                             if (displayDate.includes("-")) {
-                              displayDate = new Date(displayDate).toDateString(); // Converts "2026-06-10" to "Wed Jun 10 2026"
+                              displayDate = new Date(displayDate).toDateString();
                             }
 
                             return (
@@ -400,9 +394,20 @@ export default function AdminPage() {
                                     </div>
 
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                      <button onClick={() => updateStatus(booking.id, "approved")} className="glass-btn" style={{ borderColor: G.success, color: G.success }}>Approve & Send Pass</button>
-                                      <button onClick={() => updateStatus(booking.id, "completed")} className="glass-btn" style={{ borderColor: G.info, color: G.info }}>Complete</button>
-                                      <button onClick={() => updateStatus(booking.id, "rejected")} className="glass-btn" style={{ borderColor: G.danger, color: G.danger }}>Reject</button>
+                                      
+                                      {/* Hide Approve button if already approved */}
+                                      {booking.status !== "approved" && booking.status !== "completed" && (
+                                        <button onClick={() => updateStatus(booking.id, "approved")} className="glass-btn" style={{ borderColor: G.success, color: G.success }}>Approve & Send Pass</button>
+                                      )}
+                                      
+                                      {booking.status !== "completed" && (
+                                        <button onClick={() => updateStatus(booking.id, "completed")} className="glass-btn" style={{ borderColor: G.info, color: G.info }}>Complete</button>
+                                      )}
+                                      
+                                      {booking.status !== "rejected" && (
+                                        <button onClick={() => updateStatus(booking.id, "rejected")} className="glass-btn" style={{ borderColor: G.danger, color: G.danger }}>Reject</button>
+                                      )}
+
                                       <button onClick={() => setViewQrBooking(booking)} className="glass-btn">View QR Pass</button>
                                       <button onClick={() => openReschedule(booking)} className="glass-btn">Reschedule</button>
                                       <button onClick={() => generateInvoice(booking)} className="dark-btn" style={{ marginLeft: "auto" }}>Invoice</button>
@@ -522,7 +527,7 @@ export default function AdminPage() {
         )}
       </AnimatePresence>
 
-      {/* RESCHEDULE MODAL */}
+      {/* ══════════════ RESCHEDULE MODAL (Glass Styled) ══════════════ */}
       <AnimatePresence>
         {selectedBooking && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedBooking(null)} style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>

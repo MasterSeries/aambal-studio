@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { doc, getDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 
 export const Route = createFileRoute("/booking-confirmed")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -20,6 +22,7 @@ const Icons = {
   Phone: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>,
   Mail: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
   CheckShield: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>,
+  Close: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>,
   ChevronLeft: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>,
   ChevronRight: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>,
   Plane: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.2-1.1.6L3 8l6 4-3 3-3-1-2 2 4 4 4-2-1-3 3-3 4 6l1.2-.7c.4-.2.7-.6.6-1.1z"></path></svg>,
@@ -168,6 +171,18 @@ export default function MainBookingApp() {
     return () => unsubscribe();
   }, [selectedDate]);
 
+  // ── REALTIME LISTENER FOR THE CONFIRMED BOOKING ──
+  useEffect(() => {
+    if (step === 3 && confirmedBooking?.id) {
+      const unsub = onSnapshot(doc(db, "bookings", confirmedBooking.id), (docSnap) => {
+        if (docSnap.exists()) {
+          setConfirmedBooking((prev: any) => ({ ...prev, ...docSnap.data() }));
+        }
+      });
+      return () => unsub();
+    }
+  }, [step, confirmedBooking?.id]);
+
   const handleBookingExecution = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate || !selectedTime || !name || !phone || !email) {
@@ -181,43 +196,35 @@ export default function MainBookingApp() {
     const pkgPrice = selectedPlan?.price || "Custom Rate";
 
     const operationalPayload = {
-      // Modern Fields
       referenceId: bookingReference,
       clientName: name,
       clientPhone: phone,
       clientEmail: email,
       packageName: pkgName,
       packagePrice: pkgPrice,
-      
-      // Legacy support for older components
       reference: bookingReference,
       name: name,
       phone: phone,
       email: email,
       package: pkgName,
       price: pkgPrice,
-
-      // Core details
       date: selectedDate,
       time: selectedTime,
       partnerName: partnerName || null,
       partnerPhone: partnerPhone || null,
       status: "pending", 
-      
-      // FIX: Use createdAt so it appears in Admin Dashboard
       createdAt: serverTimestamp(),
     };
 
     try {
-      await addDoc(collection(db, "bookings"), operationalPayload);
-
-      // Generate verification URL for the QR code
+      const docRef = await addDoc(collection(db, "bookings"), operationalPayload);
       const baseUrl = window.location.origin;
       const verificationUrl = `${baseUrl}/verify-booking?ref=${bookingReference}`;
       const qrEndpoint = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verificationUrl)}`;
 
-      setConfirmedBooking({ ...operationalPayload, qrUrl: qrEndpoint });
-      setStep(3); // Progress to pending processing screen
+      // Attach the real document ID so the real-time listener works!
+      setConfirmedBooking({ ...operationalPayload, id: docRef.id, qrUrl: qrEndpoint });
+      setStep(3); 
     } catch (error) {
       console.error("Submission failed:", error);
       alert("Something went wrong. Please try again.");
@@ -233,6 +240,11 @@ export default function MainBookingApp() {
       </div>
     );
   }
+
+  // Derive Status Variables for Real-Time UI
+  const isApproved = confirmedBooking?.status === "approved" || confirmedBooking?.status === "completed";
+  const isRejected = confirmedBooking?.status === "rejected";
+  const isPending = !isApproved && !isRejected;
 
   return (
     <div className="min-h-screen w-full relative bg-gradient-to-br from-[#f8ecec] via-[#f4f0f0] to-[#e6e9f0] flex items-center justify-center p-4 sm:p-8 font-sans overflow-hidden">
@@ -316,7 +328,6 @@ export default function MainBookingApp() {
                       </div>
                     </div>
 
-                    {/* Partner / Plus One Details */}
                     <div className="border-t border-slate-100 pt-5">
                       <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
                         <Icons.Users /> Partner / Plus One (Optional)
@@ -404,15 +415,19 @@ export default function MainBookingApp() {
 
           ) : (
             
-            // ── PAGE 3: PENDING APPROVAL SCREEN ──
+            // ── PAGE 3: REAL-TIME DYNAMIC APPROVAL SCREEN ──
             <motion.div key="page-3" initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="w-full flex-1 flex flex-col items-center justify-center py-6 sm:py-10">
               
               <div className="text-center mb-8">
-                <div className="w-12 h-12 bg-amber-50 text-amber-500 border border-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
-                  <Icons.Clock />
+                <div className={`w-12 h-12 ${isApproved ? 'bg-emerald-50 text-emerald-500 border-emerald-100' : isRejected ? 'bg-red-50 text-red-500 border-red-100' : 'bg-amber-50 text-amber-500 border-amber-100'} rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner transition-colors duration-500`}>
+                  {isApproved ? <Icons.CheckShield /> : isRejected ? <Icons.Close /> : <Icons.Clock />}
                 </div>
-                <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Booking Request Processing</h1>
-                <p className="text-slate-400 mt-1.5 text-xs font-medium max-w-sm mx-auto">We have received your details. Your pass will be fully activated upon admin approval.</p>
+                <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight transition-all duration-500">
+                  {isApproved ? "Pass Secured Successfully" : isRejected ? "Booking Declined" : "Booking Request Processing"}
+                </h1>
+                <p className="text-slate-400 mt-1.5 text-xs font-medium max-w-sm mx-auto transition-all duration-500">
+                  {isApproved ? "Your credentials have been verified and your pass is live." : isRejected ? "Unfortunately, this slot could not be secured." : "We have received your details. Your pass will be fully activated upon admin approval."}
+                </p>
               </div>
 
               <div className="w-full max-w-[850px] bg-[#fffdfb]/90 backdrop-blur-2xl rounded-[36px] border border-white/90 shadow-[0_15px_40px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col md:flex-row relative">
@@ -455,7 +470,9 @@ export default function MainBookingApp() {
                       </div>
                       <div className="bg-white/80 border border-slate-100 rounded-2xl p-4 shadow-sm">
                          <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Operational Status</p>
-                         <span className="inline-flex items-center text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider mt-0.5">Pending Approval</span>
+                         <span className={`inline-flex items-center text-[10px] font-bold ${isApproved ? 'text-emerald-600 bg-emerald-50' : isRejected ? 'text-red-600 bg-red-50' : 'text-amber-600 bg-amber-50'} px-2.5 py-0.5 rounded-full uppercase tracking-wider mt-0.5 transition-colors duration-500`}>
+                           {isApproved ? "Verified & Active" : isRejected ? "Void" : "Pending Approval"}
+                         </span>
                       </div>
                     </div>
                   </div>
@@ -467,10 +484,12 @@ export default function MainBookingApp() {
 
                 <div className="w-full md:w-[260px] p-6 sm:p-8 flex flex-col items-center justify-center bg-white/70">
                   <p className="text-[10px] font-bold text-slate-400 mb-4 tracking-widest text-center uppercase">Validation Token</p>
-                  <div className="bg-[#fffdfb] p-3 rounded-2xl shadow-md border border-slate-100 opacity-50">
-                    <img src={confirmedBooking.qrUrl} alt="QR Secure Code Pass" className="w-28 h-28 object-contain blur-[2px]" />
+                  <div className={`bg-[#fffdfb] p-3 rounded-2xl shadow-md border border-slate-100 transition-all duration-500 ${isApproved ? 'opacity-100' : 'opacity-50'}`}>
+                    <img src={confirmedBooking.qrUrl} alt="QR Secure Code Pass" className={`w-28 h-28 object-contain transition-all duration-500 ${isApproved ? 'blur-0' : 'blur-[2px]'}`} />
                   </div>
-                  <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-4 text-center leading-tight">QR activates upon<br/>admin approval</p>
+                  <p className={`text-[9px] font-bold uppercase tracking-widest mt-4 text-center leading-tight transition-colors duration-500 ${isApproved ? 'text-emerald-500' : isRejected ? 'text-red-500' : 'text-amber-500'}`}>
+                    {isApproved ? "Scan to verify booking" : isRejected ? "Pass is Invalid" : "QR activates upon admin approval"}
+                  </p>
                 </div>
               </div>
 

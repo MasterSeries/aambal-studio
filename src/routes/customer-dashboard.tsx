@@ -2,116 +2,89 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   collection, query, where, onSnapshot,
-  deleteDoc, doc, updateDoc,
+  deleteDoc, doc, updateDoc, getDocs 
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import jsPDF from "jspdf";
 import { motion, AnimatePresence } from "motion/react";
+import hero from "@/assets/hero-festival.jpg"; // Using for the aesthetic card headers
 
 export const Route = createFileRoute("/customer-dashboard")({
   component: CustomerDashboard,
 });
 
-// ── Tokens ────────────────────────────────────────────────────────────────────
-const G = {
-  green: "#4a9460", greenLight: "#6db87a", greenPale: "#a8e6b0",
-  gold: "#c8a84a", goldLight: "#e8c97a",
-  ink: "#040d08", ink2: "#071009", ink3: "#0d1f10",
-  text: "#f0ede6", muted: "rgba(240,237,230,0.45)",
-  border: "rgba(109,184,122,0.15)", error: "#e87a6a",
+// ── "Dormy" Inspired Aesthetic Tokens ─────────────────────────────────────────
+const D = {
+  bg: "#000000",
+  card: "#18181b", // Dark grey
+  cardLight: "#27272a",
+  pink: "#f2a7db",
+  green: "#bdf0cc",
+  peach: "#ffb38a",
+  textMain: "#ffffff",
+  textMuted: "#8e8e93",
 };
 
-const STATUS_META: Record<string, { color: string; bg: string; label: string }> = {
-  pending:              { color: G.gold,       bg: `${G.gold}15`,       label: "Pending" },
-  approved:             { color: G.greenLight, bg: `${G.green}15`,      label: "Approved" },
-  completed:            { color: "#7ab8e8",    bg: "rgba(122,184,232,0.12)", label: "Completed" },
-  rejected:             { color: G.error,      bg: `${G.error}12`,      label: "Rejected" },
-  reschedule_requested: { color: "#c8a4e8",    bg: "rgba(200,164,232,0.12)", label: "Reschedule Req." },
+const STATUS_THEME: Record<string, { color: string; label: string }> = {
+  pending:              { color: D.peach, label: "Pending" },
+  approved:             { color: D.green, label: "Approved" },
+  completed:            { color: D.pink,  label: "Completed" },
+  rejected:             { color: "#ff6b6b", label: "Rejected" },
+  reschedule_requested: { color: "#a78bfa", label: "Reschedule Req." },
 };
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p style={{ fontSize: "0.58rem", letterSpacing: "0.38em", textTransform: "uppercase", color: G.greenLight, opacity: 0.8, marginBottom: 6 }}>
-      ✦ {children} ✦
-    </p>
-  );
-}
+// ── Icons ───────────────────────────────────────────────────────────────────
+const Icons = {
+  User: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
+  LogOut: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
+  Calendar: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+  Clock: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
+  QrCode: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
+  FileText: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
+  More: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+};
 
-function StatCard({ label, value, accent = G.greenPale }: { label: string; value: number; accent?: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      style={{
-        background: "rgba(255,255,255,0.025)", border: `1px solid ${G.border}`,
-        borderRadius: 20, padding: "1.4rem 1.6rem",
-        backdropFilter: "blur(12px)",
-      }}
-    >
-      <p style={{ fontSize: 10, letterSpacing: "0.22em", textTransform: "uppercase", color: G.muted, marginBottom: 12 }}>{label}</p>
-      <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "3.2rem", fontWeight: 300, color: accent, lineHeight: 1 }}>{value}</p>
-    </motion.div>
-  );
-}
-
-function ProgressBar({ status }: { status: string }) {
-  const steps = ["pending", "approved", "completed"];
-  const idx = steps.indexOf(status);
-  return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-        {steps.map((s, i) => {
-          const active = i <= idx;
-          const meta = STATUS_META[s] ?? STATUS_META.pending;
-          return (
-            <div key={s} style={{ display: "flex", alignItems: "center", flex: i < steps.length - 1 ? 1 : undefined }}>
-              <div style={{
-                width: 14, height: 14, borderRadius: "50%", flexShrink: 0,
-                background: active ? meta.color : G.border,
-                boxShadow: active ? `0 0 10px ${meta.color}60` : "none",
-                transition: "all 0.4s",
-              }} />
-              {i < steps.length - 1 && (
-                <div style={{
-                  flex: 1, height: 1,
-                  background: i < idx ? `linear-gradient(90deg,${meta.color},${STATUS_META[steps[i + 1]].color})` : G.border,
-                  transition: "background 0.4s",
-                }} />
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-        {steps.map((s) => (
-          <span key={s} style={{ fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: G.muted }}>{s}</span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function CustomerDashboard() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [rescheduleBooking, setRescheduleBooking] = useState<any>(null);
+  const [viewQrBooking, setViewQrBooking] = useState<any>(null);
   const [newDate, setNewDate] = useState("");
   const [newSlots, setNewSlots] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // ── FIREBASE FETCH LOGIC ──
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = "/customer-login"; return; }
-      setUserName(user.email || "");
-      const q = query(collection(db, "bookings"), where("email", "==", user.email));
+      setUserName(user.displayName || "Guest");
+      setUserEmail(user.email || "");
+      
+      const q = query(collection(db, "bookings"), where("clientEmail", "==", user.email));
+      
       const unsubBookings = onSnapshot(q, (snap) => {
         const data: any[] = [];
         snap.forEach((d) => data.push({ id: d.id, ...d.data() }));
-        setBookings(data);
-        setLoading(false);
+        
+        if(data.length === 0) {
+           const legacyQ = query(collection(db, "bookings"), where("email", "==", user.email));
+           getDocs(legacyQ).then((legacySnap: any) => {
+              const legacyData: any[] = [];
+              legacySnap.forEach((ld: any) => legacyData.push({ id: ld.id, ...ld.data() }));
+              
+              // Sort by date (newest first)
+              legacyData.sort((a,b) => new Date(b.createdAt?.toDate() || 0).getTime() - new Date(a.createdAt?.toDate() || 0).getTime());
+              setBookings(legacyData);
+              setLoading(false);
+           });
+        } else {
+           data.sort((a,b) => new Date(b.createdTimestamp?.toDate() || b.createdAt?.toDate() || 0).getTime() - new Date(a.createdTimestamp?.toDate() || a.createdAt?.toDate() || 0).getTime());
+           setBookings(data);
+           setLoading(false);
+        }
       });
       return () => unsubBookings();
     });
@@ -119,7 +92,7 @@ export default function CustomerDashboard() {
   }, []);
 
   async function cancelBooking(id: string) {
-    if (!confirm("Cancel this booking?")) return;
+    if (!confirm("Are you sure you want to cancel this booking?")) return;
     try { await deleteDoc(doc(db, "bookings", id)); }
     catch (err) { console.error(err); alert("Cancellation failed"); }
   }
@@ -139,7 +112,7 @@ export default function CustomerDashboard() {
     try {
       await updateDoc(doc(db, "bookings", rescheduleBooking.id), {
         date: newDate,
-        timeSlots: newSlots.split(","),
+        timeSlots: newSlots.split(",").map(s => s.trim()),
         status: "reschedule_requested",
       });
       setRescheduleBooking(null);
@@ -148,246 +121,316 @@ export default function CustomerDashboard() {
 
   function downloadInvoice(booking: any) {
     const pdf = new jsPDF();
-    pdf.setFillColor(4, 13, 8);
+    pdf.setFillColor(24, 24, 27); // Dark grey matching UI
     pdf.rect(0, 0, 210, 297, "F");
-    pdf.setTextColor(160, 220, 176);
+    pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(22);
-    pdf.text("The Aambal Retreat", 20, 28);
-    pdf.setTextColor(240, 237, 230);
-    pdf.setFontSize(13);
-    pdf.text("Booking Invoice", 20, 42);
-    pdf.setDrawColor(109, 184, 122, 0.3);
-    pdf.line(20, 50, 190, 50);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("STUDIO HUT", 20, 28);
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "normal");
+    pdf.setTextColor(189, 240, 204); // Mint green
+    pdf.text("DIGITAL BOOKING INVOICE", 20, 36);
+    
+    pdf.setDrawColor(255, 255, 255, 0.1);
+    pdf.line(20, 45, 190, 45);
+    
     const rows = [
-      ["Customer", booking.name],
-      ["Email", booking.email],
-      ["Phone", booking.phone],
-      ["Package", booking.package || "Festival Package"],
+      ["Reference ID", booking.referenceId || booking.reference || "N/A"],
+      ["Primary Guest", booking.clientName || booking.name],
+      ["Partner / Plus One", booking.partnerName || "—"],
+      ["Contact Email", booking.clientEmail || booking.email],
+      ["Contact Phone", booking.clientPhone || booking.phone],
+      ["Package", booking.packageName || booking.package || "Festival Package"],
       ["Date", booking.date],
-      ["Slots", booking.timeSlots?.join(", ") || booking.time],
-      ["Status", booking.status],
+      ["Timeline", booking.timeSlots?.join(", ") || booking.time],
+      ["Status", (booking.status || "Pending").toUpperCase()],
     ];
+
     rows.forEach(([k, v], i) => {
-      pdf.setTextColor(160, 220, 176);
-      pdf.text(k, 20, 68 + i * 16);
-      pdf.setTextColor(240, 237, 230);
-      pdf.text(String(v ?? "—"), 80, 68 + i * 16);
+      pdf.setTextColor(142, 142, 147); // Muted text
+      pdf.text(k, 20, 60 + i * 12);
+      pdf.setTextColor(255, 255, 255); // White text
+      pdf.text(String(v ?? "—"), 80, 60 + i * 12);
     });
-    pdf.setTextColor(109, 184, 122);
-    pdf.text("Thank you for staying with us.", 20, 220);
-    pdf.save(`${booking.name}-invoice.pdf`);
+
+    pdf.setTextColor(189, 240, 204);
+    pdf.text("Thank you for choosing Studio Hut.", 20, 240);
+    pdf.save(`${booking.clientName || booking.name}-invoice.pdf`);
   }
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: G.ink, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 48, animation: "floatLotus 3s ease-in-out infinite" }}>🪷</div>
-          <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.5rem", color: G.greenPale, marginTop: 16 }}>Loading…</p>
-        </motion.div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#bdf0cc] border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
+  const activeBookings = bookings.filter(b => b.status === "approved" || b.status === "completed");
+  const pendingBookings = bookings.filter(b => b.status === "pending" || !b.status || b.status === "reschedule_requested");
+
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500;600&family=Cinzel:wght@400;500&display=swap');
-        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        body,#root{background:${G.ink};color:${G.text};font-family:'Raleway',sans-serif}
-        ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:${G.green}50;border-radius:3px}
-        @keyframes floatLotus{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-        @keyframes ambientPulse{0%,100%{opacity:.3}50%{opacity:.55}}
-        input:focus,select:focus,textarea:focus{outline:none;border-color:${G.green}!important}
-        input::placeholder{color:rgba(240,237,230,0.2)}
-        select option{background:${G.ink2};color:${G.text}}
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        /* Custom chunky font for the logo to mimic 'Dormy' */
+        @font-face {
+          font-family: 'DormyCustom';
+          src: url('https://fonts.gstatic.com/s/syne/v18/8vIX7w4MziK8_y-aOwc.woff2') format('woff2');
+        }
+
+        body { background: ${D.bg}; color: ${D.textMain}; font-family: 'Plus Jakarta Sans', sans-serif; }
+        ::-webkit-scrollbar { width: 0px; }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: G.ink, position: "relative", overflow: "hidden" }}>
-        {/* ambient glows */}
-        <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
-          <div style={{ position: "absolute", top: "10%", left: "5%", width: 500, height: 400, borderRadius: "50%", background: `radial-gradient(circle,${G.green}07,transparent 70%)`, animation: "ambientPulse 6s ease-in-out infinite" }} />
-          <div style={{ position: "absolute", bottom: "15%", right: "5%", width: 400, height: 350, borderRadius: "50%", background: `radial-gradient(circle,${G.gold}05,transparent 70%)`, animation: "ambientPulse 8s ease-in-out infinite 2s" }} />
-          <div style={{ position: "absolute", inset: 0, backgroundImage: `repeating-linear-gradient(0deg,transparent,transparent 79px,${G.green}03 80px),repeating-linear-gradient(90deg,transparent,transparent 79px,${G.green}03 80px)` }} />
-        </div>
-
-        <div style={{ position: "relative", zIndex: 1, maxWidth: 1200, margin: "0 auto", padding: "2.5rem 1.5rem 5rem" }}>
-
-          {/* HEADER */}
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: "3.5rem" }}>
-            <div>
-              <SectionLabel>Customer Portal</SectionLabel>
-              <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "clamp(2.4rem,5vw,4rem)", fontWeight: 300, color: G.text, lineHeight: 1.05 }}>
-                My <em style={{ fontStyle: "italic", color: G.greenPale }}>Bookings</em>
-              </h1>
-              <p style={{ color: G.muted, fontSize: "0.85rem", marginTop: 6, letterSpacing: "0.05em" }}>{userName}</p>
-            </div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <a href="/customer-profile" style={{ border: `1px solid ${G.border}`, color: G.muted, borderRadius: 100, padding: "10px 20px", textDecoration: "none", fontSize: "0.82rem", letterSpacing: "0.08em", transition: "border-color .2s" }}>My Profile</a>
-              <a href="/customer-history" style={{ border: `1px solid ${G.border}`, color: G.muted, borderRadius: 100, padding: "10px 20px", textDecoration: "none", fontSize: "0.82rem", letterSpacing: "0.08em" }}>History</a>
-              <button onClick={handleLogout} style={{ background: `${G.error}15`, border: `1px solid ${G.error}30`, color: G.error, borderRadius: 100, padding: "10px 20px", fontSize: "0.82rem", letterSpacing: "0.08em", cursor: "pointer", fontFamily: "'Raleway',sans-serif" }}>Sign out</button>
-            </div>
-          </motion.div>
-
-          {/* STATS */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: "3.5rem" }}>
-            {[
-              { label: "Total", value: bookings.length, accent: G.greenPale },
-              { label: "Pending", value: bookings.filter(b => b.status === "pending").length, accent: G.gold },
-              { label: "Approved", value: bookings.filter(b => b.status === "approved").length, accent: G.greenLight },
-              { label: "Completed", value: bookings.filter(b => b.status === "completed").length, accent: "#7ab8e8" },
-            ].map((s, i) => (
-              <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
-                <StatCard {...s} />
-              </motion.div>
-            ))}
+      <div className="min-h-screen bg-black p-4 sm:p-6 md:p-8">
+        <div className="max-w-[1000px] mx-auto">
+          
+          {/* ── HEADER ── */}
+          <div className="flex justify-between items-center mb-8">
+            <h1 style={{ fontFamily: 'DormyCustom', fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', color: 'white' }}>
+              STUDIO HUT
+            </h1>
+            <button onClick={handleLogout} className="w-12 h-12 bg-[#18181b] rounded-full flex items-center justify-center text-orange-400 hover:bg-[#27272a] transition-colors">
+              <Icons.LogOut />
+            </button>
           </div>
 
-          {/* BOOKINGS */}
-          {bookings.length === 0 && (
-            <div style={{ textAlign: "center", padding: "5rem 2rem", border: `1px solid ${G.border}`, borderRadius: 24, color: G.muted }}>
-              <div style={{ fontSize: 40, marginBottom: 16, opacity: 0.4 }}>🪷</div>
-              <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.5rem" }}>No bookings yet</p>
+          {/* ── TOP STATS ROW (Dormy Pastel Blocks) ── */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-[#18181b] rounded-[32px] p-6 flex flex-col justify-between aspect-square md:aspect-auto">
+              <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center text-white mb-4"><Icons.User /></div>
+              <div>
+                <p className="text-white font-bold text-lg leading-tight truncate">{userName}</p>
+                <p className="text-[#8e8e93] text-xs font-medium mt-1 truncate">{userEmail}</p>
+              </div>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-[#bdf0cc] rounded-[32px] p-6 flex flex-col justify-between aspect-square md:aspect-auto">
+              <div className="w-10 h-10 bg-black/10 rounded-full flex items-center justify-center text-black mb-4">
+                <span className="font-bold">{activeBookings.length}</span>
+              </div>
+              <p className="text-black font-bold text-lg leading-tight">Active<br/>Passes</p>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-[#ffb38a] rounded-[32px] p-6 flex flex-col justify-between aspect-square md:aspect-auto">
+              <div className="w-10 h-10 bg-black/10 rounded-full flex items-center justify-center text-black mb-4">
+                <span className="font-bold">{pendingBookings.length}</span>
+              </div>
+              <p className="text-black font-bold text-lg leading-tight">Pending<br/>Review</p>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-[#f2a7db] rounded-[32px] p-6 flex flex-col justify-between aspect-square md:aspect-auto">
+               <div className="w-10 h-10 bg-black/10 rounded-full flex items-center justify-center text-black mb-4">
+                <span className="font-bold">{bookings.length}</span>
+              </div>
+              <p className="text-black font-bold text-lg leading-tight">Total<br/>History</p>
+            </motion.div>
+          </div>
+
+          {/* ── BOOKINGS LIST ── */}
+          <h2 className="text-white font-bold text-2xl mb-6">Your Sessions</h2>
+          
+          {bookings.length === 0 ? (
+            <div className="bg-[#18181b] rounded-[32px] p-12 text-center">
+              <p className="text-[#8e8e93] font-medium">No active sessions found.</p>
+              <a href="/#packages" className="inline-block mt-4 bg-white text-black font-bold px-6 py-3 rounded-full text-sm">Explore Packages</a>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {bookings.map((booking, i) => {
+                const theme = STATUS_THEME[booking.status] || STATUS_THEME.pending;
+                const primaryName = booking.clientName || booking.name || "Guest";
+                const partnerName = booking.partnerName;
+                const dateDisplay = booking.date?.includes("-") ? new Date(booking.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : booking.date;
+
+                return (
+                  <motion.div 
+                    key={booking.id} 
+                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }}
+                    className="bg-[#18181b] rounded-[32px] overflow-hidden flex flex-col"
+                  >
+                    {/* Visual Header (Like the 'Mates' image card) */}
+                    <div className="h-40 w-full relative">
+                      <img src={hero} alt="Session Cover" className="w-full h-full object-cover opacity-60 mix-blend-luminosity" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#18181b] to-transparent"></div>
+                      
+                      <div className="absolute top-4 left-4">
+                         <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2">
+                           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.color }}></div>
+                           <span className="text-white text-[10px] font-bold tracking-widest uppercase">{theme.label}</span>
+                         </div>
+                      </div>
+                      
+                      <div className="absolute bottom-4 left-4 right-4">
+                        <h3 className="text-white font-bold text-2xl leading-tight truncate">{booking.packageName || booking.package || "Premium Session"}</h3>
+                      </div>
+                    </div>
+
+                    {/* Body Content */}
+                    <div className="p-6 flex-1 flex flex-col">
+                      
+                      {/* Date & Time Blocks */}
+                      <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="bg-[#27272a] rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+                          <Icons.Calendar />
+                          <span className="text-white font-bold text-sm mt-2">{dateDisplay}</span>
+                        </div>
+                        <div className="bg-[#27272a] rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+                          <Icons.Clock />
+                          <span className="text-white font-bold text-sm mt-2">{booking.time || booking.timeSlots?.join(", ") || "TBD"}</span>
+                        </div>
+                      </div>
+
+                      {/* Guest Info */}
+                      <div className="bg-[#27272a] rounded-2xl p-4 mb-6">
+                        <div className="flex justify-between items-center mb-3 pb-3 border-b border-white/5">
+                          <span className="text-[#8e8e93] text-xs font-medium">Primary</span>
+                          <span className="text-white text-sm font-bold truncate max-w-[150px]">{primaryName}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[#8e8e93] text-xs font-medium">Partner</span>
+                          <span className="text-white text-sm font-bold truncate max-w-[150px]">{partnerName || "—"}</span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-auto grid grid-cols-4 gap-2">
+                        <button 
+                          onClick={() => setViewQrBooking(booking)}
+                          className="col-span-2 bg-white text-black rounded-2xl py-3.5 font-bold text-sm flex items-center justify-center gap-2 hover:bg-gray-200 transition-colors"
+                        >
+                          <Icons.QrCode /> Pass
+                        </button>
+                        <button 
+                          onClick={() => downloadInvoice(booking)}
+                          className="col-span-1 bg-[#27272a] text-white rounded-2xl py-3.5 flex items-center justify-center hover:bg-[#3f3f46] transition-colors"
+                          title="Download Invoice"
+                        >
+                          <Icons.FileText />
+                        </button>
+                        {booking.status !== "completed" && booking.status !== "approved" ? (
+                          <button 
+                            onClick={() => openReschedule(booking)}
+                            className="col-span-1 bg-[#27272a] text-white rounded-2xl py-3.5 flex items-center justify-center hover:bg-[#3f3f46] transition-colors"
+                            title="Reschedule"
+                          >
+                            <Icons.Calendar />
+                          </button>
+                        ) : (
+                          <a 
+                            href="/customer-gallery"
+                            className="col-span-1 bg-[#f2a7db] text-black rounded-2xl py-3.5 flex items-center justify-center hover:brightness-110 transition-colors"
+                            title="View Gallery"
+                          >
+                            <Icons.More />
+                          </a>
+                        )}
+                      </div>
+                      
+                      {booking.status === "pending" && (
+                        <button onClick={() => cancelBooking(booking.id)} className="w-full text-center text-[#ff6b6b] text-xs font-bold mt-4 hover:underline">
+                          Cancel Booking
+                        </button>
+                      )}
+
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {bookings.map((booking, i) => {
-              const meta = STATUS_META[booking.status] ?? STATUS_META.pending;
-              const expanded = expandedId === booking.id;
-              return (
-                <motion.div key={booking.id}
-                  initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07, duration: 0.5 }}
-                  style={{ background: "rgba(7,16,9,0.85)", border: `1px solid ${G.border}`, borderRadius: 24, overflow: "hidden", backdropFilter: "blur(16px)" }}>
-
-                  {/* CARD HEADER – always visible */}
-                  <div
-                    onClick={() => setExpandedId(expanded ? null : booking.id)}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.75rem", cursor: "pointer", gap: 16, flexWrap: "wrap" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 14, background: `${meta.color}18`, border: `1px solid ${meta.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cinzel',serif", fontSize: "1.1rem", color: meta.color, flexShrink: 0 }}>
-                        {booking.name?.charAt(0)?.toUpperCase()}
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.35rem", color: G.text, fontWeight: 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{booking.name}</p>
-                        <p style={{ fontSize: 12, color: G.muted, marginTop: 2 }}>📅 {booking.date} &nbsp;·&nbsp; {booking.package || "Festival Package"}</p>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ background: meta.bg, color: meta.color, borderRadius: 100, padding: "4px 14px", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>{meta.label}</span>
-                      <span style={{ color: G.muted, fontSize: 16, transition: "transform .3s", transform: expanded ? "rotate(180deg)" : "none" }}>⌄</span>
-                    </div>
-                  </div>
-
-                  {/* EXPANDED BODY */}
-                  <AnimatePresence>
-                    {expanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.35 }}
-                        style={{ overflow: "hidden", borderTop: `1px solid ${G.border}` }}>
-                        <div style={{ padding: "1.5rem 1.75rem", display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: "1.5rem" }}>
-
-                          {/* LEFT – info */}
-                          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                              {[
-                                ["Date", `📅 ${booking.date}`],
-                                ["Time", `⏰ ${booking.timeSlots?.join(", ") || booking.time}`],
-                                ["Phone", booking.phone],
-                                ["Package", booking.package || "Festival Package"],
-                              ].map(([k, v]) => (
-                                <div key={k} style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${G.border}`, borderRadius: 12, padding: "10px 12px" }}>
-                                  <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: G.muted, marginBottom: 4 }}>{k}</p>
-                                  <p style={{ fontSize: 13, color: G.text }}>{v}</p>
-                                </div>
-                              ))}
-                            </div>
-                            {booking.notes && (
-                              <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${G.border}`, borderRadius: 12, padding: "12px 14px" }}>
-                                <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: G.muted, marginBottom: 6 }}>Notes</p>
-                                <p style={{ fontSize: 13, color: G.muted, lineHeight: 1.6 }}>{booking.notes}</p>
-                              </div>
-                            )}
-                            {booking.photographer && (
-                              <div style={{ background: `rgba(74,148,96,0.07)`, border: `1px solid ${G.green}25`, borderRadius: 12, padding: "12px 14px" }}>
-                                <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: G.greenPale, opacity: 0.7, marginBottom: 6 }}>Photographer</p>
-                                <p style={{ fontSize: 14, color: G.text }}>📸 {booking.photographer}</p>
-                              </div>
-                            )}
-                            <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${G.border}`, borderRadius: 12, padding: "14px 16px" }}>
-                              <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: G.muted, marginBottom: 12 }}>Progress</p>
-                              <ProgressBar status={booking.status} />
-                            </div>
-                          </div>
-
-                          {/* RIGHT – actions */}
-                          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                            <p style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: G.muted, marginBottom: 4 }}>Actions</p>
-                            {[
-                              { label: "Download Invoice", color: G.green, onClick: () => downloadInvoice(booking) },
-                              { label: "Reschedule", color: "#7ab8e8", onClick: () => openReschedule(booking) },
-                              { label: "Cancel Booking", color: G.error, onClick: () => cancelBooking(booking.id) },
-                            ].map(({ label, color, onClick }) => (
-                              <button key={label} onClick={(e) => { e.stopPropagation(); onClick(); }}
-                                style={{ background: `${color}12`, border: `1px solid ${color}30`, color, borderRadius: 14, padding: "12px 18px", cursor: "pointer", fontFamily: "'Raleway',sans-serif", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.06em", textAlign: "left", transition: "background .2s" }}>
-                                {label}
-                              </button>
-                            ))}
-                            <a href="/customer-gallery"
-                              style={{ background: `rgba(200,164,232,0.08)`, border: `1px solid rgba(200,164,232,0.2)`, color: "#c8a4e8", borderRadius: 14, padding: "12px 18px", textDecoration: "none", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.06em", display: "block", textAlign: "left" }}>
-                              View Gallery
-                            </a>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              );
-            })}
-          </div>
         </div>
 
-        {/* RESCHEDULE MODAL */}
+        {/* ── DIGITAL PASS QR MODAL ── */}
         <AnimatePresence>
-          {rescheduleBooking && (
+          {viewQrBooking && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(4,13,8,0.92)", backdropFilter: "blur(10px)", padding: "1.5rem" }}>
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+            >
               <motion.div
-                initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                style={{ background: G.ink2, border: `1px solid ${G.border}`, borderRadius: 24, padding: "2.5rem", width: "100%", maxWidth: 440 }}>
-                <SectionLabel>Modify your booking</SectionLabel>
-                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "2rem", fontWeight: 300, color: G.text, marginBottom: 28 }}>Reschedule</h2>
-                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                  {[
-                    { label: "New date", value: newDate, onChange: setNewDate, type: "date" },
-                    { label: "Time slots", value: newSlots, onChange: setNewSlots, type: "text", placeholder: "e.g. 08:00, 10:00" },
-                  ].map(({ label, value, onChange, type, placeholder }) => (
-                    <div key={label}>
-                      <p style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: G.greenPale, opacity: 0.7, marginBottom: 6 }}>{label}</p>
-                      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-                        style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: `1px solid ${G.border}`, borderRadius: 12, padding: "12px 14px", color: G.text, fontSize: "0.9rem", fontFamily: "'Raleway',sans-serif", colorScheme: "dark" }} />
-                    </div>
-                  ))}
-                  <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                    <button onClick={submitReschedule}
-                      style={{ flex: 1, background: `linear-gradient(135deg,${G.green},${G.greenLight})`, border: "none", borderRadius: 14, padding: "13px", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "'Raleway',sans-serif", fontSize: "0.9rem" }}>
-                      Confirm
-                    </button>
-                    <button onClick={() => setRescheduleBooking(null)}
-                      style={{ flex: 1, background: "transparent", border: `1px solid ${G.border}`, borderRadius: 14, padding: "13px", color: G.muted, cursor: "pointer", fontFamily: "'Raleway',sans-serif", fontSize: "0.9rem" }}>
-                      Cancel
-                    </button>
+                className="bg-[#18181b] border border-[#27272a] rounded-[40px] w-full max-w-md p-8 relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#bdf0cc]/20 to-transparent pointer-events-none" />
+                
+                <button 
+                  onClick={() => setViewQrBooking(null)}
+                  className="absolute top-6 right-6 w-8 h-8 bg-[#27272a] rounded-full flex items-center justify-center text-white/50 hover:text-white transition-colors"
+                >✕</button>
+
+                <div className="text-center mt-4">
+                  <div className="inline-block px-3 py-1 bg-[#bdf0cc]/10 text-[#bdf0cc] text-[10px] font-bold uppercase tracking-widest rounded-full mb-4">
+                    Access Pass
+                  </div>
+                  <h2 className="text-white font-bold text-2xl mb-1 leading-tight">
+                    {viewQrBooking.packageName || viewQrBooking.package || "Premium Session"}
+                  </h2>
+                  <p className="text-[#8e8e93] text-xs font-medium mb-8">Ref: {viewQrBooking.referenceId || viewQrBooking.reference || "N/A"}</p>
+                  
+                  <div className="bg-white p-4 rounded-3xl inline-block mb-8 shadow-[0_0_40px_rgba(189,240,204,0.15)]">
+                    <img 
+                      src={viewQrBooking.qrUrl || `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/verify-booking?ref=' + (viewQrBooking.referenceId || viewQrBooking.reference))}`} 
+                      alt="QR Code" 
+                      className={`w-48 h-48 ${viewQrBooking.status === 'approved' || viewQrBooking.status === 'completed' ? '' : 'blur-sm opacity-50'}`} 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-left">
+                     <div className="bg-[#27272a] p-4 rounded-2xl">
+                       <p className="text-[#8e8e93] text-[10px] uppercase font-bold tracking-wider mb-1">Primary</p>
+                       <p className="text-white text-sm font-bold truncate">{viewQrBooking.clientName || viewQrBooking.name}</p>
+                     </div>
+                     <div className="bg-[#27272a] p-4 rounded-2xl">
+                       <p className="text-[#8e8e93] text-[10px] uppercase font-bold tracking-wider mb-1">Partner</p>
+                       <p className="text-white text-sm font-bold truncate">{viewQrBooking.partnerName || "—"}</p>
+                     </div>
                   </div>
                 </div>
               </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* ── RESCHEDULE MODAL ── */}
+        <AnimatePresence>
+          {rescheduleBooking && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/80 backdrop-blur-md p-4 pb-0 sm:pb-4"
+            >
+              <motion.div
+                initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                className="bg-[#18181b] border border-[#27272a] rounded-t-[40px] sm:rounded-[40px] w-full max-w-md p-8"
+              >
+                <h2 className="text-white font-bold text-2xl mb-2">Reschedule Session</h2>
+                <p className="text-[#8e8e93] text-sm mb-8">Choose a new date and time for your booking.</p>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[#8e8e93] text-xs font-bold uppercase tracking-wider mb-2 ml-1">New Date</label>
+                    <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-full bg-[#27272a] border-none text-white rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-[#ffb38a] transition-all color-scheme-dark" style={{ colorScheme: 'dark' }} />
+                  </div>
+                  <div>
+                    <label className="block text-[#8e8e93] text-xs font-bold uppercase tracking-wider mb-2 ml-1">New Time Slot</label>
+                    <input type="text" placeholder="e.g. 08:30 AM" value={newSlots} onChange={(e) => setNewSlots(e.target.value)} className="w-full bg-[#27272a] border-none text-white rounded-2xl px-5 py-4 outline-none focus:ring-2 focus:ring-[#ffb38a] transition-all" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-8">
+                  <button onClick={() => setRescheduleBooking(null)} className="bg-[#27272a] text-white font-bold py-4 rounded-2xl">Cancel</button>
+                  <button onClick={submitReschedule} className="bg-[#ffb38a] text-black font-bold py-4 rounded-2xl">Confirm</button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </>
   );
