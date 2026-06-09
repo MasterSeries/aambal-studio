@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot, deleteDoc, doc, updateDoc, getDocs } from "firebase/firestore";
+import {
+  collection, query, where, onSnapshot,
+  deleteDoc, doc, updateDoc, getDocs 
+} from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import jsPDF from "jspdf";
@@ -236,7 +239,8 @@ export default function CustomerDashboard() {
   const monthName = calendarDate.toLocaleString('default', { month: 'long' });
   const year = calendarDate.getFullYear();
   const daysInMonth = new Date(year, calendarDate.getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = new Date(year, calendarDate.getMonth(), 1).getDay(); // 0 is Sun
+  let firstDayOfMonth = new Date(year, calendarDate.getMonth(), 1).getDay() - 1; 
+  if (firstDayOfMonth === -1) firstDayOfMonth = 6; // Adjust so Monday is 0, Sunday is 6
 
   const blanks = Array.from({ length: firstDayOfMonth }, (_, i) => i);
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
@@ -269,7 +273,7 @@ export default function CustomerDashboard() {
            </div>
            
            <div className="flex flex-col gap-8 text-white/40">
-             <button className="text-white bg-white/10 p-3 rounded-2xl"><Icons.Calendar /></button>
+             <button className="text-white bg-white/10 p-3 rounded-2xl shadow-inner"><Icons.Calendar /></button>
              <button className="hover:text-white transition-colors p-3"><Icons.Image /></button>
              <button className="hover:text-white transition-colors p-3"><Icons.FileText /></button>
            </div>
@@ -326,9 +330,9 @@ export default function CustomerDashboard() {
 
             </div>
 
-            {/* COLUMN 2: Calendar View (Center) */}
-            <div className="lg:col-span-6 flex flex-col gap-6">
-              <GlassPanel className="p-6 sm:p-8 flex-1 bg-white/50 border-white/60 shadow-sm flex flex-col min-h-[450px]">
+            {/* COLUMN 2: Contained Monthly Calendar (Center) */}
+            <div className="lg:col-span-6 flex flex-col">
+              <GlassPanel className="p-6 sm:p-8 bg-white/50 border-white/60 shadow-sm flex flex-col">
                 
                 {/* Calendar Header */}
                 <div className="flex justify-between items-center mb-6">
@@ -343,16 +347,16 @@ export default function CustomerDashboard() {
                 </div>
 
                 {/* Days of Week */}
-                <div className="grid grid-cols-7 gap-2 mb-2">
+                <div className="grid grid-cols-7 gap-1 sm:gap-2 mb-2">
                   {daysOfWeek.map(d => (
                      <div key={d} className="text-center text-[10px] font-bold text-gray-400 uppercase tracking-widest">{d}</div>
                   ))}
                 </div>
 
-                {/* Main Calendar Grid */}
-                <div className="flex-1 grid grid-cols-7 gap-2 lg:gap-3">
+                {/* Main Calendar Grid - Fixed aspect ratio cells to prevent stretching */}
+                <div className="grid grid-cols-7 gap-1 sm:gap-2">
                   {/* Empty offset cells */}
-                  {blanks.map(b => <div key={`blank-${b}`} className="min-h-[100px]" />)}
+                  {blanks.map(b => <div key={`blank-${b}`} className="aspect-square bg-transparent" />)}
                   
                   {/* Actual Day Cells */}
                   {days.map(day => {
@@ -369,24 +373,24 @@ export default function CustomerDashboard() {
                     });
 
                     return (
-                      <div key={day} className={`bg-white/40 border ${isToday ? 'border-gray-400' : 'border-white/50'} rounded-[20px] p-2 min-h-[110px] flex flex-col gap-1 shadow-sm transition-all hover:shadow-md`}>
+                      <div key={day} className={`aspect-square bg-white/40 border ${isToday ? 'border-gray-400' : 'border-white/50'} rounded-xl sm:rounded-2xl p-1 sm:p-2 flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden`}>
                         
-                        {/* Day Number */}
-                        <span className={`text-xs font-bold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday ? 'bg-black text-white shadow-md' : 'text-gray-500'}`}>
+                        <span className={`text-[10px] sm:text-xs font-bold mb-1 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full shrink-0 ${isToday ? 'bg-black text-white shadow-md' : 'text-gray-500'}`}>
                           {day}
                         </span>
                         
                         {/* Events inside the day */}
-                        <div className="flex flex-col gap-1.5 overflow-y-auto max-h-[80px] scrollbar-hide pr-1">
+                        <div className="flex flex-col gap-1 overflow-y-auto scrollbar-hide pr-1">
                           {dayEvents.map((ev, i) => {
                             const isHome = ev.type === 'homestay';
                             return (
-                              <div key={i} className={`text-[9px] font-bold px-2 py-1.5 rounded-lg truncate shadow-sm ${isHome ? 'bg-[#ffb38a]/20 text-orange-700 border border-orange-200/50' : 'bg-black text-white'}`}>
+                              <div key={i} className={`text-[8px] sm:text-[9px] font-bold px-1.5 py-1 rounded-md truncate shadow-sm ${isHome ? 'bg-[#ffb38a]/20 text-orange-700 border border-orange-200/50' : 'bg-black text-white'}`} title={ev.packageName || ev.package || "Booking"}>
                                  {isHome ? '🏡 ' : '📸 '} {ev.time || ev.timeSlots?.[0] || 'TBD'}
                               </div>
                             )
                           })}
                         </div>
+
                       </div>
                     );
                   })}
