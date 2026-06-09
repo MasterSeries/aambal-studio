@@ -9,6 +9,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { sendWhatsAppMessage } from "@/lib/sendWhatsapp";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis,
   Tooltip, CartesianGrid, BarChart, Bar, Area, AreaChart,
@@ -150,9 +151,58 @@ function AdminPage() {
     return () => unsub();
   }, []);
 
-  async function updateStatus(id: string, status: string) {
-    try { await updateDoc(doc(db, "bookings", id), { status }); }
-    catch (err) { console.error(err); alert("Update failed"); }
+  // ── UPDATE STATUS AND SEND WHATSAPP CONFIRMATIONS ──
+  async function updateStatus(id: string, newStatus: string) {
+    try { 
+      // Update Firestore Status
+      await updateDoc(doc(db, "bookings", id), { status: newStatus }); 
+      
+      // If approved, trigger the WhatsApp confirmation messages
+      if (newStatus === "approved") {
+        const b = bookings.find(x => x.id === id);
+        if (b) {
+          const baseUrl = window.location.origin;
+          const verificationUrl = `${baseUrl}/verify-booking?ref=${b.referenceId || b.reference}`;
+          
+          // 1. Message Primary Guest
+          const primaryPhone = b.clientPhone || b.phone;
+          if (primaryPhone) {
+            try {
+              await sendWhatsAppMessage(primaryPhone, {
+                name: b.clientName || b.name,
+                packageName: b.packageName || b.package,
+                price: b.packagePrice || b.price,
+                date: b.date,
+                time: b.time || b.timeSlots?.join(", "),
+                reference: `${b.referenceId || b.reference}\n\nYour booking is APPROVED! View your Digital Pass & Updates here: ${verificationUrl}`,
+              });
+            } catch (err) {
+              console.error("Failed to send WhatsApp to primary client:", err);
+            }
+          }
+
+          // 2. Message Partner / Plus One (If provided)
+          if (b.partnerPhone && b.partnerName) {
+            try {
+              await sendWhatsAppMessage(b.partnerPhone, {
+                name: b.partnerName,
+                packageName: b.packageName || b.package,
+                price: b.packagePrice || b.price,
+                date: b.date,
+                time: b.time || b.timeSlots?.join(", "),
+                reference: `${b.referenceId || b.reference}\n\nYou've been added as a partner! Both of you can access the photo gallery & digital pass here: ${verificationUrl}`,
+              });
+            } catch (err) {
+              console.error("Failed to send WhatsApp to partner:", err);
+            }
+          }
+        }
+      }
+      alert(`Status updated to ${newStatus}`);
+    } catch (err) { 
+      console.error(err); 
+      alert("Update failed"); 
+    }
   }
 
   async function assignPhotographer(id: string) {
@@ -198,26 +248,31 @@ function AdminPage() {
     pdf.setFont("helvetica", "bold");
     pdf.text("CLIENT DETAILS", 20, 55);
     pdf.setFont("helvetica", "normal");
-    pdf.text(`Name: ${booking.name}`, 20, 65);
-    pdf.text(`Email: ${booking.email}`, 20, 72);
-    pdf.text(`Phone: ${booking.phone}`, 20, 79);
+    pdf.text(`Name: ${booking.clientName || booking.name}`, 20, 65);
+    pdf.text(`Email: ${booking.clientEmail || booking.email}`, 20, 72);
+    pdf.text(`Phone: ${booking.clientPhone || booking.phone}`, 20, 79);
+    
+    // Add partner details to invoice if available
+    if (booking.partnerName) {
+      pdf.text(`Partner: ${booking.partnerName} (${booking.partnerPhone})`, 20, 86);
+    }
 
     autoTable(pdf, {
-      startY: 95,
+      startY: 100,
       theme: 'grid',
       headStyles: { fillColor: [17, 17, 17], textColor: 255, fontStyle: 'bold' },
       bodyStyles: { textColor: 50, fontSize: 10, cellPadding: 8 },
       alternateRowStyles: { fillColor: [245, 245, 245] },
       head: [["Service Detail", "Information"]],
       body: [
-        ["Selected Package", booking.package || "Custom Session"],
+        ["Selected Package", booking.packageName || booking.package || "Custom Session"],
         ["Scheduled Date", booking.date || "TBD"],
-        ["Reserved Time Slot", booking.timeSlots?.join(", ") || booking.time || "TBD"],
+        ["Reserved Time Slot", booking.time || booking.timeSlots?.join(", ") || "TBD"],
         ["Booking Status", (booking.status || "Pending").toUpperCase()],
         ["Assigned Photographer", booking.photographer || "Pending Assignment"]
       ]
     });
-    pdf.save(`StudioHut_Invoice_${booking.name.replace(/\s+/g, '_')}.pdf`);
+    pdf.save(`StudioHut_Invoice_${(booking.clientName || booking.name).replace(/\s+/g, '_')}.pdf`);
   }
 
   function downloadAnalyticsPDF() {
@@ -255,7 +310,7 @@ function AdminPage() {
   }
 
   const totalBookings = bookings.length;
-  const pendingCount = bookings.filter(b => b.status === "pending").length;
+  const pendingCount = bookings.filter(b => b.status === "pending" || !b.status).length;
   const approvedCount = bookings.filter(b => b.status === "approved").length;
   const completedCount = bookings.filter(b => b.status === "completed").length;
   const rejectedCount = bookings.filter(b => b.status === "rejected").length;
@@ -270,9 +325,12 @@ function AdminPage() {
   ];
 
   const filteredBookings = bookings.filter(b => {
-    const matchSearch = b.name?.toLowerCase().includes(search.toLowerCase()) ||
+    const matchSearch = 
+      b.clientName?.toLowerCase().includes(search.toLowerCase()) || 
+      b.name?.toLowerCase().includes(search.toLowerCase()) ||
+      b.clientEmail?.toLowerCase().includes(search.toLowerCase()) ||
       b.email?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" ? true : b.status === statusFilter;
+    const matchStatus = statusFilter === "all" ? true : (b.status || "pending") === statusFilter;
     return matchSearch && matchStatus;
   });
 
@@ -345,7 +403,6 @@ function AdminPage() {
 
       {/* ── BACKGROUND LAYER ── */}
       <div style={{ position: "fixed", inset: 0, zIndex: -1 }}>
-        {/* Using the hero image heavily blurred and brightened to create the glassmorphism environment */}
         <img src={hero} alt="bg" style={{ width: "100%", height: "100%", objectFit: "cover", filter: "blur(90px) brightness(1.4) saturate(1.2)", transform: "scale(1.1)" }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%)" }} />
       </div>
@@ -482,13 +539,18 @@ function AdminPage() {
                         ) : (
                           filteredBookings.map((booking) => {
                             const isExpanded = expandedId === booking.id;
+                            const clientDisplay = booking.clientName || booking.name;
+                            const partnerDisplay = booking.partnerName ? ` + ${booking.partnerName}` : "";
+
                             return (
                               <div key={booking.id} style={{ background: "rgba(255,255,255,0.6)", borderRadius: 16, border: "1px solid rgba(255,255,255,0.8)", overflow: "hidden", transition: "0.2s", boxShadow: isExpanded ? "0 10px 20px rgba(0,0,0,0.03)" : "none" }}>
                                 <div onClick={() => setExpandedId(isExpanded ? null : booking.id)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
                                   <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 12 }}>
                                     <span style={{ fontSize: 13, fontWeight: 600 }}>{booking.date || "No Date"}</span>
                                     <span style={{ width: 1, height: 12, background: "rgba(0,0,0,0.1)" }}></span>
-                                    <span style={{ fontSize: 14, fontWeight: 500 }}>{booking.name}</span>
+                                    <span style={{ fontSize: 14, fontWeight: 500 }}>
+                                      {clientDisplay} <span style={{fontSize: 12, color: G.textMuted}}>{partnerDisplay}</span>
+                                    </span>
                                   </div>
                                   <StatusPill status={booking.status || "pending"} />
                                 </div>
@@ -496,21 +558,26 @@ function AdminPage() {
                                 {isExpanded && (
                                   <div style={{ padding: "0 16px 16px 16px", borderTop: "1px solid rgba(0,0,0,0.04)", paddingTop: 12 }}>
                                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                                      <div><p style={{ fontSize: 10, color: G.textMuted }}>Package</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.package}</p></div>
-                                      <div><p style={{ fontSize: 10, color: G.textMuted }}>Contact</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.phone}</p></div>
-                                      <div><p style={{ fontSize: 10, color: G.textMuted }}>Time</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.timeSlots?.join(", ") || booking.time}</p></div>
+                                      <div><p style={{ fontSize: 10, color: G.textMuted }}>Package</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.packageName || booking.package}</p></div>
+                                      <div><p style={{ fontSize: 10, color: G.textMuted }}>Contact (Pri)</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.clientPhone || booking.phone}</p></div>
+                                      <div><p style={{ fontSize: 10, color: G.textMuted }}>Time</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.time || booking.timeSlots?.join(", ")}</p></div>
                                       
-                                      <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+                                      {/* Show partner phone if exists */}
+                                      {booking.partnerPhone && (
+                                        <div><p style={{ fontSize: 10, color: G.textMuted }}>Contact (Partner)</p><p style={{ fontSize: 13, fontWeight: 500 }}>{booking.partnerPhone}</p></div>
+                                      )}
+                                      
+                                      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, gridColumn: "1 / -1" }}>
                                         <div style={{ flex: 1 }}>
                                           <p style={{ fontSize: 10, color: G.textMuted }}>Photographer</p>
-                                          <input value={photographerInputs[booking.id] || ""} onChange={e => setPhotographerInputs({ ...photographerInputs, [booking.id]: e.target.value })} placeholder={booking.photographer || "Assign..."} style={{ width: "100%", background: "rgba(0,0,0,0.03)", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 12 }} />
+                                          <input value={photographerInputs[booking.id] || ""} onChange={e => setPhotographerInputs({ ...photographerInputs, [booking.id]: e.target.value })} placeholder={booking.photographer || "Assign..."} style={{ width: "100%", background: "rgba(0,0,0,0.03)", border: "none", borderRadius: 6, padding: "8px 12px", fontSize: 12 }} />
                                         </div>
-                                        <button onClick={() => assignPhotographer(booking.id)} className="dark-btn" style={{ padding: "4px 10px", fontSize: 11 }}>Save</button>
+                                        <button onClick={() => assignPhotographer(booking.id)} className="dark-btn" style={{ padding: "8px 16px", fontSize: 11 }}>Save</button>
                                       </div>
                                     </div>
 
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                      <button onClick={() => updateStatus(booking.id, "approved")} className="glass-btn" style={{ borderColor: G.success, color: G.success }}>Approve</button>
+                                      <button onClick={() => updateStatus(booking.id, "approved")} className="glass-btn" style={{ borderColor: G.success, color: G.success }}>Approve & Send Pass</button>
                                       <button onClick={() => updateStatus(booking.id, "completed")} className="glass-btn" style={{ borderColor: G.info, color: G.info }}>Complete</button>
                                       <button onClick={() => updateStatus(booking.id, "rejected")} className="glass-btn" style={{ borderColor: G.danger, color: G.danger }}>Reject</button>
                                       <button onClick={() => openReschedule(booking)} className="glass-btn">Reschedule</button>
@@ -635,7 +702,7 @@ function AdminPage() {
                   style={{ background: "rgba(0,0,0,0.05)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>✕</button>
               </div>
               <p style={{ fontSize: 13, color: G.textMuted, marginBottom: "1.5rem" }}>
-                Updating slot for <strong style={{ color: G.textMain }}>{selectedBooking.name}</strong>
+                Updating slot for <strong style={{ color: G.textMain }}>{selectedBooking.clientName || selectedBooking.name}</strong>
               </p>
               
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

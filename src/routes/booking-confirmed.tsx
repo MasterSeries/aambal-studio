@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { doc, getDoc, collection, query, where, onSnapshot, addDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { sendWhatsAppMessage } from "@/lib/sendWhatsapp";
+import { doc, getDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
 
 export const Route = createFileRoute("/booking-confirmed")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -17,6 +18,7 @@ const Icons = {
   Calendar: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
   Clock: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>,
   User: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
+  Users: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
   Phone: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>,
   Mail: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
   CheckShield: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>,
@@ -101,7 +103,6 @@ export default function MainBookingApp() {
   const { plan: planId } = Route.useSearch();
   const navigate = useNavigate();
 
-  // Multi-step state (1: Info, 2: Schedule, 3: Success)
   const [step, setStep] = useState<number>(1);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [loadingPlan, setLoadingPlan] = useState(true);
@@ -110,12 +111,25 @@ export default function MainBookingApp() {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   
+  // Primary Client
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   
+  // Partner / Plus One
+  const [partnerName, setPartnerName] = useState("");
+  const [partnerPhone, setPartnerPhone] = useState("");
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmedBooking, setConfirmedBooking] = useState<any>(null);
+
+  // Auto-fill logged in user
+  useEffect(() => {
+    if (auth.currentUser) {
+      setEmail(auth.currentUser.email || "");
+      setName(auth.currentUser.displayName || "");
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchPackageContext() {
@@ -159,7 +173,7 @@ export default function MainBookingApp() {
   const handleBookingExecution = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDate || !selectedTime || !name || !phone || !email) {
-      alert("Please complete all details to proceed.");
+      alert("Please complete all required details to proceed.");
       return;
     }
 
@@ -167,7 +181,7 @@ export default function MainBookingApp() {
     const bookingReference = `TKT-${Math.floor(1000 + Math.random() * 9000)}`;
 
     const operationalPayload = {
-      referenceId: bookingReference, // Explicit mapping for the verification page
+      referenceId: bookingReference,
       packageName: selectedPlan?.name || planId || "Premium Package",
       packagePrice: selectedPlan?.price || "Custom Rate",
       date: selectedDate,
@@ -175,34 +189,24 @@ export default function MainBookingApp() {
       clientName: name,
       clientPhone: phone,
       clientEmail: email,
-      createdTimestamp: new Date().toISOString(),
+      partnerName: partnerName || null,
+      partnerPhone: partnerPhone || null,
+      status: "pending", // ALways pending until Admin approves
+      createdTimestamp: serverTimestamp(),
     };
 
     try {
       await addDoc(collection(db, "bookings"), operationalPayload);
 
-      // Construct verification URL based on deployment origin
-      const baseUrl = window.location.origin.includes("localhost") 
-        ? "https://your-production-url.com" // Provide fallback if testing locally to simulate real scanning
-        : window.location.origin;
+      // Generate verification URL for the QR code
+      const baseUrl = window.location.origin;
       const verificationUrl = `${baseUrl}/verify-booking?ref=${bookingReference}`;
       const qrEndpoint = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(verificationUrl)}`;
 
-      try {
-        await sendWhatsAppMessage(phone, {
-          name,
-          packageName: operationalPayload.packageName,
-          price: operationalPayload.packagePrice,
-          date: selectedDate,
-          time: selectedTime,
-          reference: `${bookingReference}\n\nView Digital Pass: ${verificationUrl}`,
-        });
-      } catch (wsErr) {
-        console.error("WhatsApp notification failure:", wsErr);
-      }
+      // Notice: We NO LONGER send WhatsApp here. The Admin Panel sends it upon Approval.
 
       setConfirmedBooking({ ...operationalPayload, qrUrl: qrEndpoint });
-      setStep(3); // Progress to confirmation screen
+      setStep(3); // Progress to pending processing screen
     } catch (error) {
       console.error("Submission failed:", error);
       alert("Something went wrong. Please try again.");
@@ -222,17 +226,14 @@ export default function MainBookingApp() {
   return (
     <div className="min-h-screen w-full relative bg-gradient-to-br from-[#f8ecec] via-[#f4f0f0] to-[#e6e9f0] flex items-center justify-center p-4 sm:p-8 font-sans overflow-hidden">
       
-      {/* Decorative Blur Elements */}
       <div className="absolute top-[10%] left-[5%] w-32 h-32 bg-white/40 rounded-full blur-2xl"></div>
       <div className="absolute bottom-[20%] right-[10%] w-64 h-64 bg-[#d8c5d6]/30 rounded-full blur-3xl"></div>
 
-      {/* Main Glassmorphic Panel */}
       <div className="relative z-10 w-full max-w-[1150px] bg-[#fcfaf9]/80 backdrop-blur-3xl rounded-[40px] border border-white/60 shadow-[0_20px_60px_rgba(163,136,159,0.12)] p-5 sm:p-8 flex flex-col min-h-[700px]">
         
         <AnimatePresence mode="wait">
           {step < 3 ? (
             
-            // ── STEPS 1 & 2: RESPONSIVE WIZARD ──
             <motion.div key="booking-form" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -15 }} transition={{ duration: 0.4 }} className="w-full flex flex-col flex-1">
               
               <div className="flex items-center justify-between mb-4 lg:mb-6">
@@ -245,7 +246,6 @@ export default function MainBookingApp() {
                   </div>
               </div>
 
-              {/* Mobile Progress Indicator */}
               <div className="lg:hidden flex items-center justify-between mb-6 px-2">
                 <div className="flex items-center gap-2">
                    <div className={`w-8 h-1.5 rounded-full ${step >= 1 ? 'bg-[#a3889f]' : 'bg-slate-200'}`}></div>
@@ -256,10 +256,8 @@ export default function MainBookingApp() {
                 </span>
               </div>
 
-              {/* Dynamic Grid: Stacks conditionally on Mobile, Side-by-Side on Desktop */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1">
                 
-                {/* COLUMN 1: Details (Visible on Desktop OR when Step 1 on Mobile) */}
                 <div className={`lg:col-span-7 flex-col gap-6 ${step === 1 ? 'flex' : 'hidden lg:flex'}`}>
                   
                   <div className="bg-[#fffdfb]/80 border border-white/80 rounded-[32px] p-6 sm:p-8 shadow-sm">
@@ -290,34 +288,49 @@ export default function MainBookingApp() {
                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <Icons.User /> Holder Profile
                     </h3>
-                    <div className="space-y-3">
+                    <div className="space-y-3 mb-6">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="relative">
                           <span className="absolute left-4 top-[15px] text-slate-400"><Icons.User /></span>
-                          <input type="text" required placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-white/60 border border-white/50 rounded-xl pl-11 pr-4 py-3.5 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] focus:bg-white/90 transition-all placeholder-slate-400 shadow-inner" />
+                          <input type="text" required placeholder="Full Name *" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-white/60 border border-white/50 rounded-xl pl-11 pr-4 py-3.5 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] focus:bg-white/90 transition-all placeholder-slate-400 shadow-inner" />
                         </div>
                         <div className="relative">
                           <span className="absolute left-4 top-[15px] text-slate-400"><Icons.Phone /></span>
-                          <input type="tel" required placeholder="WhatsApp Contact" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white/60 border border-white/50 rounded-xl pl-11 pr-4 py-3.5 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] focus:bg-white/90 transition-all placeholder-slate-400 shadow-inner" />
+                          <input type="tel" required placeholder="WhatsApp Contact *" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-white/60 border border-white/50 rounded-xl pl-11 pr-4 py-3.5 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] focus:bg-white/90 transition-all placeholder-slate-400 shadow-inner" />
                         </div>
                       </div>
                       <div className="relative">
                         <span className="absolute left-4 top-[15px] text-slate-400"><Icons.Mail /></span>
-                        <input type="email" required placeholder="Digital Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white/60 border border-white/50 rounded-xl pl-11 pr-4 py-3.5 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] focus:bg-white/90 transition-all placeholder-slate-400 shadow-inner" />
+                        <input type="email" required placeholder="Digital Email Address *" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white/60 border border-white/50 rounded-xl pl-11 pr-4 py-3.5 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] focus:bg-white/90 transition-all placeholder-slate-400 shadow-inner" />
+                      </div>
+                    </div>
+
+                    {/* Partner / Plus One Details */}
+                    <div className="border-t border-slate-100 pt-5">
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Icons.Users /> Partner / Plus One (Optional)
+                      </h3>
+                      <p className="text-[10px] text-slate-400 mb-3 leading-relaxed">If someone is joining your shoot, add their details so they receive gallery access and a copy of the digital pass when approved.</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="relative">
+                          <span className="absolute left-4 top-[15px] text-slate-300"><Icons.User /></span>
+                          <input type="text" placeholder="Partner's Name" value={partnerName} onChange={(e) => setPartnerName(e.target.value)} className="w-full bg-white/40 border border-slate-100 rounded-xl pl-11 pr-4 py-3 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] transition-all placeholder-slate-400" />
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-4 top-[15px] text-slate-300"><Icons.Phone /></span>
+                          <input type="tel" placeholder="Partner's WhatsApp" value={partnerPhone} onChange={(e) => setPartnerPhone(e.target.value)} className="w-full bg-white/40 border border-slate-100 rounded-xl pl-11 pr-4 py-3 text-xs font-medium text-slate-800 outline-none focus:border-[#a3889f] transition-all placeholder-slate-400" />
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Mobile Only "Next" Button */}
                   <button type="button" onClick={() => setStep(2)} disabled={!name || !phone || !email} className="lg:hidden w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all mt-4">
                     Continue to Schedule
                   </button>
                 </div>
 
-                {/* COLUMN 2: Calendar & Times (Visible on Desktop OR when Step 2 on Mobile) */}
                 <div className={`lg:col-span-5 flex-col gap-6 ${step === 2 ? 'flex' : 'hidden lg:flex'}`}>
                   
-                  {/* Mobile Only "Back" Button */}
                   <button type="button" onClick={() => setStep(1)} className="lg:hidden w-full bg-white text-slate-600 border border-slate-200 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all">
                     Back to Details
                   </button>
@@ -367,13 +380,12 @@ export default function MainBookingApp() {
                     )}
                   </div>
 
-                  {/* Core Form Submit Action */}
                   <button 
                     onClick={handleBookingExecution}
                     disabled={isSubmitting || !selectedDate || !selectedTime || !name} 
                     className="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white disabled:text-slate-500 py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-md hover:shadow-lg active:scale-[0.99]"
                   >
-                    {isSubmitting ? "Generating Credentials..." : "Generate Digital Pass"}
+                    {isSubmitting ? "Generating Credentials..." : "Submit Booking Request"}
                   </button>
                 </div>
               </div>
@@ -381,15 +393,15 @@ export default function MainBookingApp() {
 
           ) : (
             
-            // ── PAGE 3: CONFIRMATION & EMBEDDED DIGITAL TICKET ──
+            // ── PAGE 3: PENDING APPROVAL SCREEN ──
             <motion.div key="page-3" initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }} className="w-full flex-1 flex flex-col items-center justify-center py-6 sm:py-10">
               
               <div className="text-center mb-8">
-                <div className="w-12 h-12 bg-emerald-50 text-emerald-500 border border-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
-                  <Icons.CheckShield />
+                <div className="w-12 h-12 bg-amber-50 text-amber-500 border border-amber-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                  <Icons.Clock />
                 </div>
-                <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Pass Secured Successfully</h1>
-                <p className="text-slate-400 mt-1.5 text-xs font-medium max-w-sm mx-auto">Your confirmation credentials have been synced and transmitted via real-time stream channel.</p>
+                <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Booking Request Processing</h1>
+                <p className="text-slate-400 mt-1.5 text-xs font-medium max-w-sm mx-auto">We have received your details. Your pass will be fully activated upon admin approval.</p>
               </div>
 
               <div className="w-full max-w-[850px] bg-[#fffdfb]/90 backdrop-blur-2xl rounded-[36px] border border-white/90 shadow-[0_15px_40px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col md:flex-row relative">
@@ -413,7 +425,7 @@ export default function MainBookingApp() {
                   <div className="space-y-4">
                     <div className="bg-white/80 border border-slate-100 rounded-2xl p-4 shadow-sm flex justify-between items-center">
                        <div>
-                         <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Assigned Date</p>
+                         <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Requested Date</p>
                          <p className="text-xs font-bold text-slate-800">{new Date(confirmedBooking.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</p>
                        </div>
                        <div className="text-right">
@@ -426,10 +438,13 @@ export default function MainBookingApp() {
                       <div className="bg-white/80 border border-slate-100 rounded-2xl p-4 shadow-sm">
                          <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Primary Holder</p>
                          <p className="text-xs font-bold text-slate-800 truncate">{confirmedBooking.clientName}</p>
+                         {confirmedBooking.partnerName && (
+                           <p className="text-[10px] text-slate-500 mt-1 truncate">+ {confirmedBooking.partnerName}</p>
+                         )}
                       </div>
                       <div className="bg-white/80 border border-slate-100 rounded-2xl p-4 shadow-sm">
                          <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider mb-0.5">Operational Status</p>
-                         <span className="inline-flex items-center text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider mt-0.5">Verified</span>
+                         <span className="inline-flex items-center text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider mt-0.5">Pending Approval</span>
                       </div>
                     </div>
                   </div>
@@ -441,15 +456,15 @@ export default function MainBookingApp() {
 
                 <div className="w-full md:w-[260px] p-6 sm:p-8 flex flex-col items-center justify-center bg-white/70">
                   <p className="text-[10px] font-bold text-slate-400 mb-4 tracking-widest text-center uppercase">Validation Token</p>
-                  <div className="bg-[#fffdfb] p-3 rounded-2xl shadow-md border border-slate-100 hover:scale-105 transition-transform duration-300">
-                    <img src={confirmedBooking.qrUrl} alt="QR Secure Code Pass" className="w-28 h-28 object-contain" />
+                  <div className="bg-[#fffdfb] p-3 rounded-2xl shadow-md border border-slate-100 opacity-50">
+                    <img src={confirmedBooking.qrUrl} alt="QR Secure Code Pass" className="w-28 h-28 object-contain blur-[2px]" />
                   </div>
-                  <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-widest mt-4 text-center">Scan to verify booking</p>
+                  <p className="text-[9px] text-amber-500 font-bold uppercase tracking-widest mt-4 text-center leading-tight">QR activates upon<br/>admin approval</p>
                 </div>
               </div>
 
               <button onClick={() => navigate({ to: "/" })} className="mt-8 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-colors bg-white/60 hover:bg-white/90 px-8 py-3 rounded-full border border-white/80 shadow-sm">
-                Return to Dashboard
+                Return to Home
               </button>
             </motion.div>
 
