@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   collection, query, where, onSnapshot,
-  deleteDoc, doc, updateDoc, getDocs 
+  deleteDoc, doc, updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -98,7 +98,6 @@ export default function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("");
   const [rescheduleBooking, setRescheduleBooking] = useState<any>(null);
-  const [viewQrBooking, setViewQrBooking] = useState<any>(null); // State for QR Modal
   const [newDate, setNewDate] = useState("");
   const [newSlots, setNewSlots] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -107,27 +106,12 @@ export default function CustomerDashboard() {
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       if (!user) { window.location.href = "/customer-login"; return; }
       setUserName(user.email || "");
-      
-      // Query bookings connected to this email
-      const q = query(collection(db, "bookings"), where("clientEmail", "==", user.email));
-      
+      const q = query(collection(db, "bookings"), where("email", "==", user.email));
       const unsubBookings = onSnapshot(q, (snap) => {
         const data: any[] = [];
         snap.forEach((d) => data.push({ id: d.id, ...d.data() }));
-        
-        // Fallback for older booking schema 
-        if(data.length === 0) {
-           const legacyQ = query(collection(db, "bookings"), where("email", "==", user.email));
-           getDocs(legacyQ).then(legacySnap => {
-              const legacyData: any[] = [];
-              legacySnap.forEach(ld => legacyData.push({ id: ld.id, ...ld.data() }));
-              setBookings(legacyData);
-              setLoading(false);
-           });
-        } else {
-           setBookings(data);
-           setLoading(false);
-        }
+        setBookings(data);
+        setLoading(false);
       });
       return () => unsubBookings();
     });
@@ -155,7 +139,7 @@ export default function CustomerDashboard() {
     try {
       await updateDoc(doc(db, "bookings", rescheduleBooking.id), {
         date: newDate,
-        timeSlots: newSlots.split(",").map(s => s.trim()),
+        timeSlots: newSlots.split(","),
         status: "reschedule_requested",
       });
       setRescheduleBooking(null);
@@ -175,24 +159,23 @@ export default function CustomerDashboard() {
     pdf.setDrawColor(109, 184, 122, 0.3);
     pdf.line(20, 50, 190, 50);
     const rows = [
-      ["Primary Guest", booking.clientName || booking.name],
-      ["Partner / Plus One", booking.partnerName || "—"],
-      ["Contact Email", booking.clientEmail || booking.email],
-      ["Contact Phone", booking.clientPhone || booking.phone],
-      ["Package", booking.packageName || booking.package || "Festival Package"],
+      ["Customer", booking.name],
+      ["Email", booking.email],
+      ["Phone", booking.phone],
+      ["Package", booking.package || "Festival Package"],
       ["Date", booking.date],
-      ["Timeline", booking.timeSlots?.join(", ") || booking.time],
+      ["Slots", booking.timeSlots?.join(", ") || booking.time],
       ["Status", booking.status],
     ];
     rows.forEach(([k, v], i) => {
       pdf.setTextColor(160, 220, 176);
-      pdf.text(k, 20, 68 + i * 14);
+      pdf.text(k, 20, 68 + i * 16);
       pdf.setTextColor(240, 237, 230);
-      pdf.text(String(v ?? "—"), 80, 68 + i * 14);
+      pdf.text(String(v ?? "—"), 80, 68 + i * 16);
     });
     pdf.setTextColor(109, 184, 122);
-    pdf.text("Thank you for your booking. We look forward to capturing your vision.", 20, 240);
-    pdf.save(`${booking.clientName || booking.name}-invoice.pdf`);
+    pdf.text("Thank you for staying with us.", 20, 220);
+    pdf.save(`${booking.name}-invoice.pdf`);
   }
 
   if (loading) {
@@ -251,7 +234,7 @@ export default function CustomerDashboard() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 12, marginBottom: "3.5rem" }}>
             {[
               { label: "Total", value: bookings.length, accent: G.greenPale },
-              { label: "Pending", value: bookings.filter(b => b.status === "pending" || !b.status).length, accent: G.gold },
+              { label: "Pending", value: bookings.filter(b => b.status === "pending").length, accent: G.gold },
               { label: "Approved", value: bookings.filter(b => b.status === "approved").length, accent: G.greenLight },
               { label: "Completed", value: bookings.filter(b => b.status === "completed").length, accent: "#7ab8e8" },
             ].map((s, i) => (
@@ -273,11 +256,6 @@ export default function CustomerDashboard() {
             {bookings.map((booking, i) => {
               const meta = STATUS_META[booking.status] ?? STATUS_META.pending;
               const expanded = expandedId === booking.id;
-              
-              const primaryName = booking.clientName || booking.name;
-              const partnerName = booking.partnerName;
-              const packageDisplay = booking.packageName || booking.package || "Premium Package";
-
               return (
                 <motion.div key={booking.id}
                   initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07, duration: 0.5 }}
@@ -289,13 +267,11 @@ export default function CustomerDashboard() {
                     style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.75rem", cursor: "pointer", gap: 16, flexWrap: "wrap" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1, minWidth: 0 }}>
                       <div style={{ width: 44, height: 44, borderRadius: 14, background: `${meta.color}18`, border: `1px solid ${meta.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Cinzel',serif", fontSize: "1.1rem", color: meta.color, flexShrink: 0 }}>
-                        {primaryName?.charAt(0)?.toUpperCase()}
+                        {booking.name?.charAt(0)?.toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
-                        <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.35rem", color: G.text, fontWeight: 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {primaryName} {partnerName && <span style={{fontSize: "1rem", color: G.muted}}> & {partnerName}</span>}
-                        </p>
-                        <p style={{ fontSize: 12, color: G.muted, marginTop: 2 }}>📅 {booking.date} &nbsp;·&nbsp; {packageDisplay}</p>
+                        <p style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.35rem", color: G.text, fontWeight: 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{booking.name}</p>
+                        <p style={{ fontSize: 12, color: G.muted, marginTop: 2 }}>📅 {booking.date} &nbsp;·&nbsp; {booking.package || "Festival Package"}</p>
                       </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -315,29 +291,12 @@ export default function CustomerDashboard() {
 
                           {/* LEFT – info */}
                           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                            
-                            {/* Guest Details Panel */}
-                            <div style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${G.border}`, borderRadius: 12, padding: "12px 14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                               <div>
-                                 <p style={{ fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: G.muted, marginBottom: 4 }}>Primary Guest</p>
-                                 <p style={{ fontSize: 13, color: G.text, fontWeight: 500 }}>{primaryName}</p>
-                                 <p style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>{booking.clientPhone || booking.phone}</p>
-                               </div>
-                               {partnerName && (
-                                 <div style={{ borderLeft: `1px solid ${G.border}`, paddingLeft: 10 }}>
-                                   <p style={{ fontSize: 9, letterSpacing: "0.15em", textTransform: "uppercase", color: G.muted, marginBottom: 4 }}>Partner</p>
-                                   <p style={{ fontSize: 13, color: G.text, fontWeight: 500 }}>{partnerName}</p>
-                                   <p style={{ fontSize: 11, color: G.muted, marginTop: 2 }}>{booking.partnerPhone}</p>
-                                 </div>
-                               )}
-                            </div>
-
                             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                               {[
                                 ["Date", `📅 ${booking.date}`],
                                 ["Time", `⏰ ${booking.timeSlots?.join(", ") || booking.time}`],
-                                ["Package", packageDisplay],
-                                ["Reference ID", booking.referenceId || booking.reference || "N/A"],
+                                ["Phone", booking.phone],
+                                ["Package", booking.package || "Festival Package"],
                               ].map(([k, v]) => (
                                 <div key={k} style={{ background: "rgba(255,255,255,0.025)", border: `1px solid ${G.border}`, borderRadius: 12, padding: "10px 12px" }}>
                                   <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: G.muted, marginBottom: 4 }}>{k}</p>
@@ -345,11 +304,16 @@ export default function CustomerDashboard() {
                                 </div>
                               ))}
                             </div>
-
+                            {booking.notes && (
+                              <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${G.border}`, borderRadius: 12, padding: "12px 14px" }}>
+                                <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: G.muted, marginBottom: 6 }}>Notes</p>
+                                <p style={{ fontSize: 13, color: G.muted, lineHeight: 1.6 }}>{booking.notes}</p>
+                              </div>
+                            )}
                             {booking.photographer && (
                               <div style={{ background: `rgba(74,148,96,0.07)`, border: `1px solid ${G.green}25`, borderRadius: 12, padding: "12px 14px" }}>
-                                <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: G.greenPale, opacity: 0.7, marginBottom: 6 }}>Assigned Photographer</p>
-                                <p style={{ fontSize: 14, color: G.text, fontWeight: 500 }}>📸 {booking.photographer}</p>
+                                <p style={{ fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase", color: G.greenPale, opacity: 0.7, marginBottom: 6 }}>Photographer</p>
+                                <p style={{ fontSize: 14, color: G.text }}>📸 {booking.photographer}</p>
                               </div>
                             )}
                             <div style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${G.border}`, borderRadius: 12, padding: "14px 16px" }}>
@@ -360,24 +324,10 @@ export default function CustomerDashboard() {
 
                           {/* RIGHT – actions */}
                           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                            <p style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: G.muted, marginBottom: 4 }}>Pass & Actions</p>
-                            
-                            {/* DIGITAL PASS BUTTON */}
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setViewQrBooking(booking); }}
-                              style={{ background: `linear-gradient(135deg, ${G.gold}15, ${G.goldLight}15)`, border: `1px solid ${G.gold}40`, color: G.goldLight, borderRadius: 14, padding: "14px 18px", cursor: "pointer", fontFamily: "'Raleway',sans-serif", fontWeight: 700, fontSize: "0.85rem", letterSpacing: "0.06em", display: "flex", justifyContent: "space-between", alignItems: "center", transition: "all .2s" }}>
-                              <span>View Digital Pass</span>
-                              <span style={{ fontSize: 18 }}>🎫</span>
-                            </button>
-
-                            <a href="/customer-gallery"
-                              style={{ background: `rgba(200,164,232,0.08)`, border: `1px solid rgba(200,164,232,0.2)`, color: "#c8a4e8", borderRadius: 14, padding: "12px 18px", textDecoration: "none", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.06em", display: "block", textAlign: "left" }}>
-                              View Photo Gallery
-                            </a>
-
+                            <p style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase", color: G.muted, marginBottom: 4 }}>Actions</p>
                             {[
                               { label: "Download Invoice", color: G.green, onClick: () => downloadInvoice(booking) },
-                              { label: "Request Reschedule", color: "#7ab8e8", onClick: () => openReschedule(booking) },
+                              { label: "Reschedule", color: "#7ab8e8", onClick: () => openReschedule(booking) },
                               { label: "Cancel Booking", color: G.error, onClick: () => cancelBooking(booking.id) },
                             ].map(({ label, color, onClick }) => (
                               <button key={label} onClick={(e) => { e.stopPropagation(); onClick(); }}
@@ -385,6 +335,10 @@ export default function CustomerDashboard() {
                                 {label}
                               </button>
                             ))}
+                            <a href="/customer-gallery"
+                              style={{ background: `rgba(200,164,232,0.08)`, border: `1px solid rgba(200,164,232,0.2)`, color: "#c8a4e8", borderRadius: 14, padding: "12px 18px", textDecoration: "none", fontWeight: 600, fontSize: "0.85rem", letterSpacing: "0.06em", display: "block", textAlign: "left" }}>
+                              View Gallery
+                            </a>
                           </div>
                         </div>
                       </motion.div>
@@ -395,59 +349,6 @@ export default function CustomerDashboard() {
             })}
           </div>
         </div>
-
-        {/* ── DIGITAL PASS QR MODAL ── */}
-        <AnimatePresence>
-          {viewQrBooking && (
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(4,13,8,0.92)", backdropFilter: "blur(10px)", padding: "1.5rem" }}>
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                style={{ background: G.ink2, border: `1px solid ${G.border}`, borderRadius: 24, padding: "2.5rem", width: "100%", maxWidth: 400, textAlign: "center", position: "relative" }}>
-                
-                <button 
-                  onClick={() => setViewQrBooking(null)}
-                  style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,0.05)", border: "none", color: G.muted, width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16 }}>✕</button>
-
-                <SectionLabel>Digital Access Pass</SectionLabel>
-                <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontSize: "1.8rem", fontWeight: 300, color: G.text, marginBottom: 8, lineHeight: 1.1 }}>
-                  {viewQrBooking.packageName || viewQrBooking.package || "Premium Session"}
-                </h2>
-                <p style={{ color: G.gold, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.15em", fontWeight: 600, marginBottom: 24 }}>
-                  Ref: {viewQrBooking.referenceId || viewQrBooking.reference || "N/A"}
-                </p>
-                
-                <div style={{ background: "#ffffff", padding: "1.2rem", borderRadius: 16, display: "inline-block", marginBottom: 24, boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
-                  <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(window.location.origin + '/verify-booking?ref=' + (viewQrBooking.referenceId || viewQrBooking.reference))}`} 
-                    alt="Booking QR Code" 
-                    style={{ width: 200, height: 200, display: "block" }} 
-                  />
-                </div>
-                
-                <div style={{ display: "grid", gridTemplateColumns: viewQrBooking.partnerName ? "1fr 1fr" : "1fr", gap: 12, textAlign: "left", marginBottom: 24 }}>
-                   <div style={{ background: "rgba(255,255,255,0.03)", padding: 14, borderRadius: 14, border: `1px solid ${G.border}`}}>
-                     <p style={{ fontSize: 9, color: G.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Primary Guest</p>
-                     <p style={{ fontSize: 13, color: G.text, fontWeight: 600 }}>{viewQrBooking.clientName || viewQrBooking.name}</p>
-                   </div>
-                   {viewQrBooking.partnerName && (
-                     <div style={{ background: "rgba(255,255,255,0.03)", padding: 14, borderRadius: 14, border: `1px solid ${G.border}`}}>
-                       <p style={{ fontSize: 9, color: G.gold, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Partner</p>
-                       <p style={{ fontSize: 13, color: G.text, fontWeight: 600 }}>{viewQrBooking.partnerName}</p>
-                     </div>
-                   )}
-                </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${G.border}`, paddingTop: 16 }}>
-                   <span style={{ fontSize: 11, color: G.muted }}>📅 {viewQrBooking.date}</span>
-                   <span style={{ fontSize: 11, color: G.muted }}>⏰ {viewQrBooking.time || viewQrBooking.timeSlots?.join(", ")}</span>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* RESCHEDULE MODAL */}
         <AnimatePresence>
