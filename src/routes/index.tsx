@@ -10,11 +10,11 @@ import aerial from "@/assets/drone-aerial.jpg";
 import portrait from "@/assets/portrait-festival.jpg";
 import { InstagramFeed } from "@/components/InstagramFeed";
 import { GallerySection } from "@/components/GallerySection";
-import { HomestaySection } from "@/components/HomestaySection";
 import { collection, onSnapshot, query, orderBy, limit, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import logo from "@/assets/logo.png";
 import ambal2 from "@/assets/ambal2.mp4";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -35,11 +35,11 @@ const droneFeatures = [
   { title: "Same-Day Teaser", text: "Edited 60-second aerial reel delivered before midnight.", icon: "⚡" },
 ];
 
-const packageTeasers = [
-  { id: "portrait", name: "Festival Portrait", price: "₹4,999", duration: "1 hr", icon: "📸", color: "#a855f7", desc: "Solo & couple portraits" },
-  { id: "family", name: "Family & Group", price: "₹8,999", duration: "2 hrs", icon: "👨‍👩‍👧‍👦", color: "#c084fc", desc: "Up to 12 members", hot: true },
-  { id: "bridal", name: "Bridal / Couple", price: "₹14,999", duration: "Half day", icon: "🎬", color: "#d8b4fe", desc: "Cinematic reel included" },
-  { id: "fullday", name: "Full Day", price: "₹24,999", duration: "Sunrise→Night", icon: "🚁", color: "#7e22ce", desc: "Drone aerials + film" },
+const processSteps = [
+  { n: "01", title: "Reserve your slot", desc: "Fill the form or message us on WhatsApp. We confirm within 24 hours.", icon: "📅" },
+  { n: "02", title: "We arrive before dawn", desc: "Our team scouts your positions the night before. We're ready.", icon: "🌅" },
+  { n: "03", title: "Same-day previews", desc: "Five curated preview images on WhatsApp before midnight.", icon: "⚡" },
+  { n: "04", title: "Full gallery in 48hrs", desc: "Every edited image delivered to a private gallery. Yours forever.", icon: "🖼️" },
 ];
 
 const testimonials = [
@@ -49,13 +49,6 @@ const testimonials = [
   { name: "Anand & Preethi", pkg: "Festival Portrait", quote: "We've been to Aambal Vasantham five years running. This was the first time we came home with photos worthy of the festival.", stars: 5 },
 ];
 
-const processSteps = [
-  { n: "01", title: "Reserve your slot", desc: "Fill the form or message us on WhatsApp. We confirm within 24 hours.", icon: "📅" },
-  { n: "02", title: "We arrive before dawn", desc: "Our team scouts your positions the night before. We're ready.", icon: "🌅" },
-  { n: "03", title: "Same-day previews", desc: "Five curated preview images on WhatsApp before midnight.", icon: "⚡" },
-  { n: "04", title: "Full gallery in 48hrs", desc: "Every edited image delivered to a private gallery. Yours forever.", icon: "🖼️" },
-];
-
 const studioServices = [
   { id: "portrait",   icon: "📸", title: "Portrait Sessions",   desc: "Studio-lit portraits with seamless backdrops.", color: "#a855f7" },
   { id: "bridal",     icon: "💍", title: "Bridal & Wedding",      desc: "Full-day bridal coverage, indoor & outdoor.", color: "#c084fc" },
@@ -63,19 +56,6 @@ const studioServices = [
   { id: "newborn",    icon: "👶", title: "Newborn & Kids",        desc: "Gentle, safe newborn posing in our warm studio.", color: "#e879f9" },
   { id: "reels",      icon: "🎬", title: "Reels & Short Films",  desc: "Social-media reels produced in-studio.", color: "#d946ef" },
   { id: "corporate",  icon: "🏢", title: "Corporate & Brand",    desc: "LinkedIn headshots and brand identity.", color: "#8b5cf6" },
-];
-
-const FESTIVAL_FRAMES = [
-  {
-    id: "lotus", name: "Purple Aesthetic", color: "#a855f7", 
-    svgFrame: (
-      <svg viewBox="0 0 400 400" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
-        <rect x="8" y="8" width="384" height="384" rx="4" fill="none" stroke="#a855f7" strokeWidth="3"/>
-        <rect x="16" y="16" width="368" height="368" rx="2" fill="none" stroke="#a855f7" strokeWidth="1" strokeDasharray="6 4"/>
-        <text x="200" y="390" textAnchor="middle" fontSize="10" fill="#a855f7" fontFamily="Georgia,serif" letterSpacing="4" opacity="0.9">AAMBAL VASANTHAM</text>
-      </svg>
-    ),
-  },
 ];
 
 type MediaItem = { id?: string; type: "image" | "video"; src: string; caption: string; };
@@ -156,52 +136,32 @@ const DEFAULT_HERO_DATA = {
       id: "festival-video",
       name: "Aambal Vasantham",
       subtitle: "Festival Film",
-      media: [
-        {
-          type: "video",
-          url: ambal2,
-        },
-      ],
+      media: [{ type: "video", url: ambal2 }],
     },
-
     {
       id: "cinematic",
       name: "Cinematic Depth",
       subtitle: "24 Packages",
-      media: [
-        {
-          type: "image",
-          url: portrait,
-        },
-      ],
+      media: [{ type: "image", url: portrait }],
     },
-
     {
       id: "aerial",
       name: "Drone Aerials",
       subtitle: "18 Packages",
-      media: [
-        {
-          type: "image",
-          url: aerial,
-        },
-      ],
+      media: [{ type: "image", url: aerial }],
     },
   ],
 };
 
 function BentoDashboardUI() {
-  // Shared States (Controls both Desktop and Mobile CMS traversal)
   const [heroData, setHeroData] = useState<any>(DEFAULT_HERO_DATA);
   const [activeStyleIndex, setActiveStyleIndex] = useState(0);
   const [mediaSlideIndex, setMediaSlideIndex] = useState(0);
 
-  // Mobile States
   const [showDetailView, setShowDetailView] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [isPaused, setIsPaused] = useState(false);
 
-  // Fetch Hero CMS Data Live from Firestore
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "heroContent", "main"), (docSnap: any) => {
       if (docSnap.exists()) {
@@ -216,7 +176,6 @@ function BentoDashboardUI() {
   const activeMediaList = activeStyle?.media || [];
   const currentMedia = activeMediaList[mediaSlideIndex];
 
-  // Auto-Play Timer Logic (Desktop & Mobile)
   useEffect(() => {
     if (activeMediaList.length <= 1 || isPaused) return;
     const interval = setInterval(() => {
@@ -225,7 +184,6 @@ function BentoDashboardUI() {
     return () => clearInterval(interval);
   }, [activeStyleIndex, activeMediaList.length, isPaused]);
 
-  // Swipe Navigation Logic (Cycles Media -> then Styles)
   const handleNext = () => {
     if (mediaSlideIndex < activeMediaList.length - 1) {
       setMediaSlideIndex((prev) => prev + 1);
@@ -260,32 +218,19 @@ function BentoDashboardUI() {
 
   return (
     <>
-      {/* ── DESKTOP BENTO VIEW ── */}
       <div className="hidden md:flex w-full min-h-screen lg:h-screen flex-col items-center justify-center pt-24 lg:pt-6 pb-6 px-4 md:px-6 relative z-10">
         <div className="max-w-[1400px] w-full h-auto lg:h-full lg:max-h-[900px] bg-white/50 backdrop-blur-3xl rounded-[32px] md:rounded-[40px] p-3 md:p-4 flex flex-col lg:flex-row gap-3 md:gap-4 border border-white/80 shadow-[0_12px_60px_rgba(168,85,247,0.08)] relative overflow-hidden">
           <div className="absolute inset-0 opacity-[0.3] mix-blend-overlay pointer-events-none" style={{backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")'}}></div>
 
-          {/* Left Column (Stats/Text) */}
           <div className="w-full lg:w-[280px] h-auto lg:h-full flex flex-col gap-3 md:gap-4 relative z-10">
             <div className="bg-white/60 rounded-[28px] md:rounded-[32px] p-6 md:p-8 flex flex-col justify-between flex-1 border border-white/80 shadow-sm">
               <h2 className="text-gray-900 font-display font-bold text-xl md:text-2xl tracking-wide uppercase">{heroData.leftTitle}</h2>
               <div className="rounded-[20px] md:rounded-[24px] overflow-hidden h-[150px] md:h-[180px] mt-4 relative group shadow-md">
                 {String(heroData.leftPreviewMedia).includes(".mp4") ? (
-  <video
-    src={heroData.leftPreviewMedia}
-    autoPlay
-    muted
-    loop
-    playsInline
-    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-  />
-) : (
-  <img
-    src={heroData.leftPreviewMedia || hero}
-    alt="Studio Preview"
-    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-  />
-)}
+                  <video src={heroData.leftPreviewMedia} autoPlay muted loop playsInline className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                ) : (
+                  <img src={heroData.leftPreviewMedia || hero} alt="Studio Preview" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                )}
               </div>
             </div>
             <div className="bg-white rounded-[28px] md:rounded-[32px] p-6 md:p-8 text-gray-900 shadow-sm border border-white/80 shrink-0">
@@ -294,21 +239,12 @@ function BentoDashboardUI() {
             </div>
           </div>
 
-          {/* Middle Column (Main Slideshow) */}
           <div className="flex-1 w-full min-h-[50vh] lg:min-h-0 lg:h-full bg-white/40 rounded-[28px] md:rounded-[32px] relative overflow-hidden flex flex-col shadow-sm border border-white/80 z-10">
             <AnimatePresence mode="wait">
               {currentMedia?.type === 'video' ? (
-                <motion.video 
-                  key={currentMedia.url} src={currentMedia.url} autoPlay muted loop playsInline
-                  initial={{ opacity: 0, scale: 1.05 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }} className="absolute inset-0 w-full h-full object-cover"
-                />
+                <motion.video key={currentMedia.url} src={currentMedia.url} autoPlay muted loop playsInline initial={{ opacity: 0, scale: 1.05 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6, ease: "easeInOut" }} className="absolute inset-0 w-full h-full object-cover" />
               ) : (
-                <motion.img 
-                  key={currentMedia?.url || 'fallback'} src={currentMedia?.url || portrait}
-                  initial={{ opacity: 0, scale: 1.05 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                  transition={{ duration: 0.6, ease: "easeInOut" }} className="absolute inset-0 w-full h-full object-cover"
-                />
+                <motion.img key={currentMedia?.url || 'fallback'} src={currentMedia?.url || portrait} initial={{ opacity: 0, scale: 1.05 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6, ease: "easeInOut" }} className="absolute inset-0 w-full h-full object-cover" />
               )}
             </AnimatePresence>
             
@@ -329,10 +265,7 @@ function BentoDashboardUI() {
 
             <div className="absolute bottom-20 md:bottom-24 left-6 md:left-12 z-20 pointer-events-none pr-6">
               <AnimatePresence mode="wait">
-                <motion.h2 
-                  key={activeStyle?.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }}
-                  className="text-gray-900 font-display text-4xl sm:text-5xl md:text-7xl lg:text-[80px] leading-[1.05] max-w-2xl drop-shadow-sm"
-                >
+                <motion.h2 key={activeStyle?.name} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.4 }} className="text-gray-900 font-display text-4xl sm:text-5xl md:text-7xl lg:text-[80px] leading-[1.05] max-w-2xl drop-shadow-sm">
                   {activeStyle?.name?.split(' ').map((word: string, i: number) => <span key={i} className="block">{word}</span>)}
                 </motion.h2>
               </AnimatePresence>
@@ -358,7 +291,6 @@ function BentoDashboardUI() {
             </div>
           </div>
 
-          {/* Right Column (Style Picker) */}
           <div className="w-full lg:w-[320px] h-auto lg:h-full bg-white/60 rounded-[28px] md:rounded-[32px] p-4 md:p-6 flex flex-col relative z-10 border border-white/80 shadow-sm">
             <div className="flex justify-between items-center mb-4 md:mb-6 shrink-0">
               <h3 className="text-gray-900 font-bold text-sm">Photo Styles</h3>
@@ -367,10 +299,7 @@ function BentoDashboardUI() {
 
             <div className="flex flex-col gap-2 flex-1 overflow-y-auto scrollbar-hide pr-2 max-h-[250px] lg:max-h-none">
               {heroData.styles.map((style: any, idx: number) => (
-                <button 
-                  key={style.id || idx} onClick={() => handleStyleChange(idx)}
-                  className={`flex items-center justify-between p-2 md:p-3 rounded-[20px] md:rounded-[24px] transition-all duration-300 ${activeStyleIndex === idx ? 'bg-white shadow-sm border border-white/80' : 'hover:bg-white/50 border border-transparent'}`}
-                >
+                <button key={style.id || idx} onClick={() => handleStyleChange(idx)} className={`flex items-center justify-between p-2 md:p-3 rounded-[20px] md:rounded-[24px] transition-all duration-300 ${activeStyleIndex === idx ? 'bg-white shadow-sm border border-white/80' : 'hover:bg-white/50 border border-transparent'}`}>
                   <div className="flex items-center gap-3 md:gap-4">
                     {style.media?.[0]?.type === 'video' ? (
                       <video src={style.media[0].url} className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover shrink-0 shadow-sm" muted />
@@ -390,255 +319,46 @@ function BentoDashboardUI() {
         </div>
       </div>
 
-      {/* ── MOBILE VIEW (Dark Earthy Glassmorphism Stories) ── */}
-      <div className="flex md:hidden w-full h-[100dvh] bg-[#1a1814] relative flex-col overflow-hidden text-[#f4f3f0] font-sans z-50">
-        
-        {/* Soft Background Glows */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#8a9a3b]/10 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#c4a163]/10 rounded-full blur-[100px] pointer-events-none" />
-
-        {/* ── SCREEN 1: SWIPE CARDS (Navigates CMS Data directly) ── */}
-        <AnimatePresence mode="wait">
-          {!showDetailView && activeStyle && (
-            <motion.div 
-              key="swipe-view"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute inset-0 flex flex-col"
-            >
-              {/* Instagram-style Top Progress Bar */}
-              <div className="absolute top-4 left-6 right-6 flex gap-1.5 z-50">
-                {activeMediaList.map((_: any, i: number) => (
-                  <div key={i} className={`h-1 flex-1 rounded-full overflow-hidden bg-white/20`}>
-                    <div className={`h-full bg-white transition-all duration-300 ${i <= mediaSlideIndex ? 'w-full' : 'w-0'}`} />
-                  </div>
-                ))}
-              </div>
-
-              {/* Top Nav */}
-              <div className="absolute top-10 left-6 right-6 flex justify-between items-center z-50">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
-                  <img src={logo} className="w-full h-full object-cover invert" />
-                </div>
-                <div className="flex gap-3">
-                  <button className="relative w-12 h-12 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-lg">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                    <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-[#1a1814] text-[8px] font-bold flex items-center justify-center text-white">8</span>
-                  </button>
-                  <button onClick={() => handleScrollTo({preventDefault:()=>{}} as any, 'packages')} className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center shadow-lg">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                  </button>
-                </div>
-              </div>
-
-              {/* Main Image Card */}
-              <div className="absolute top-[90px] left-5 right-5 bottom-[110px] z-10">
-                <motion.div 
-                  key={`${activeStyleIndex}-${mediaSlideIndex}`} // Force re-render for crisp swipe animations
-                  initial={{ x: 100, opacity: 0, rotate: 5 }} animate={{ x: 0, opacity: 1, rotate: 0 }}
-                  drag="x" dragConstraints={{ left: 0, right: 0 }} 
-                  onDragStart={() => setIsPaused(true)}
-                  onDragEnd={(e, { offset }) => { 
-                    setIsPaused(false);
-                    if (offset.x < -80) handleNext();
-                    if (offset.x > 80) handlePrev();
-                  }}
-                  className="w-full h-full rounded-[40px] overflow-hidden relative border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] cursor-pointer"
-                  onClick={() => setShowDetailView(true)}
-                >
-                  {currentMedia?.type === 'video' ? (
-                    <video src={currentMedia.url} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
-                  ) : (
-                    <img src={currentMedia?.url || portrait} className="absolute inset-0 w-full h-full object-cover" />
-                  )}
-                  
-                  {/* Card Gradient */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-
-                  {/* Text Details (Pulled from CMS Style) */}
-                  <div className="absolute bottom-8 left-6 right-20">
-                    <h2 className="text-3xl font-semibold tracking-tight text-white mb-1 drop-shadow-md">
-                      {activeStyle.name} <span className="font-light opacity-60 ml-1 text-xl">{mediaSlideIndex + 1}/{activeMediaList.length}</span>
-                    </h2>
-                    <p className="text-sm text-white/70 flex items-center gap-1.5 font-medium">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                      {activeStyle.subtitle || "Aambal Retreat"}
-                    </p>
-                  </div>
-
-                  {/* Inner Heart Button */}
-                  <button onClick={(e) => { e.stopPropagation(); handleNext(); }} className="absolute bottom-6 right-6 w-14 h-14 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center text-white border border-white/30 shadow-lg hover:bg-white/30 transition">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
-                  </button>
-                </motion.div>
-
-                {/* Overlapping Close/Back Button on edge */}
-                <button onClick={handlePrev} className="absolute bottom-6 left-0 -translate-x-1/2 w-12 h-12 bg-[#2a2624] border border-white/10 rounded-full flex items-center justify-center text-white/50 shadow-xl z-20 hover:text-white transition">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ── SCREEN 3: FULL SCREEN DETAIL ── */}
-        <AnimatePresence>
-          {showDetailView && activeStyle && (
-            <motion.div 
-              key="detail-view"
-              initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} transition={{ type: "spring", damping: 25 }}
-              className="absolute inset-0 z-[100] bg-black flex flex-col"
-            >
-              {/* Full Background Image */}
-              {currentMedia?.type === 'video' ? (
-                <video src={currentMedia.url} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-80" />
-              ) : (
-                <img src={currentMedia?.url || portrait} className="absolute inset-0 w-full h-full object-cover opacity-80" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[#1a1814]/90 pointer-events-none" />
-
-              {/* Detail Top Nav */}
-              <div className="absolute top-12 left-6 right-6 flex justify-between items-center z-50">
-                <button onClick={() => setShowDetailView(false)} className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
-                </button>
-                
-                {/* Horizontal Avatars (Shows preview of other Styles) */}
-                <div className="flex bg-black/40 backdrop-blur-xl border border-white/10 rounded-full px-3 py-1.5 -space-x-2">
-                  {heroData.styles.slice(0, 4).map((style: any, i: number) => (
-                    <img 
-                      key={i} src={style.media?.[0]?.url || portrait} 
-                      className={`w-8 h-8 rounded-full border-2 border-[#1a1814] object-cover transition-all ${activeStyleIndex === i ? 'ring-2 ring-[#a3b838] scale-110 z-10' : 'opacity-60'}`} 
-                    />
-                  ))}
-                </div>
-
-                <button className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                </button>
-              </div>
-
-              {/* Detail Text & Tags */}
-              <div className="absolute bottom-[110px] left-6 right-6 z-10 flex flex-col items-center text-center">
-                <h2 className="text-4xl font-semibold tracking-tight text-white mb-2 drop-shadow-md">
-                  {activeStyle.name} <span className="font-light opacity-60 ml-1 text-2xl">{mediaSlideIndex + 1}/{activeMediaList.length}</span>
-                </h2>
-                <p className="text-sm text-white/70 flex items-center justify-center gap-1.5 font-medium mb-6">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                  {activeStyle.subtitle || "Aambal Retreat"}
-                </p>
-
-                {/* Glass Pills */}
-                <div className="flex flex-wrap justify-center gap-2 max-w-[280px]">
-                  {(['Photography', 'Lighting', 'Festival']).map((tag: string, i: number) => (
-                    <span key={i} className="px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-[11px] text-gray-300 tracking-wide">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Detail Bottom Action Bar */}
-              <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between z-50 gap-4">
-                <button onClick={() => setShowDetailView(false)} className="w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white/80 hover:bg-white/20">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                </button>
-                <button className="relative w-14 h-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white/80 hover:bg-white/20">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                  <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full text-[8px] font-bold flex items-center justify-center text-white">4</span>
-                </button>
-                <a href="#packages" className="flex-1 h-14 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white/80 font-semibold gap-2 hover:bg-[#a3b838] hover:text-black transition-colors">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                  Book Slot
-                </a>
-                <button onClick={() => setShowDetailView(false)} className="w-14 h-14 rounded-full bg-[#1c1c1e] border border-white/10 flex items-center justify-center text-white/50 hover:bg-white/10">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ── FLOATING BOTTOM NAV (Persists on Screen 1) ── */}
-        {!showDetailView && (
-          <div className="absolute bottom-6 left-6 right-6 h-[72px] bg-white/10 backdrop-blur-3xl rounded-[36px] border border-white/10 flex items-center justify-between px-6 z-50 shadow-[0_10px_40px_rgba(0,0,0,0.5)]">
-            <button onClick={() => setActiveTab('home')} className="flex flex-col items-center gap-1 group">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${activeTab === 'home' ? 'bg-[#a3b838] text-black shadow-[0_0_15px_rgba(163,184,56,0.5)]' : 'text-white/50 group-hover:text-white'}`}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={activeTab === 'home' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              </div>
-            </button>
-            <button onClick={() => setActiveTab('map')} className="flex flex-col items-center gap-1 group">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${activeTab === 'map' ? 'bg-[#a3b838] text-black shadow-[0_0_15px_rgba(163,184,56,0.5)]' : 'text-white/50 group-hover:text-white'}`}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-              </div>
-            </button>
-            <button onClick={() => setActiveTab('heart')} className="flex flex-col items-center gap-1 group">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${activeTab === 'heart' ? 'bg-[#a3b838] text-black shadow-[0_0_15px_rgba(163,184,56,0.5)]' : 'text-white/50 group-hover:text-white'}`}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={activeTab === 'heart' ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-              </div>
-            </button>
-            <button onClick={() => setActiveTab('game')} className="flex flex-col items-center gap-1 group">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${activeTab === 'game' ? 'bg-[#a3b838] text-black shadow-[0_0_15px_rgba(163,184,56,0.5)]' : 'text-white/50 group-hover:text-white'}`}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4M8 10v4M15 13h.01M18 11h.01"/></svg>
-              </div>
-            </button>
-          </div>
-        )}
-
-      </div>
+      {/* MOBILE SWIPE UI CAN GO HERE */}
     </>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HUB DASHBOARD SECTION
-// ─────────────────────────────────────────────────────────────────────────────
 function HubDashboard() {
-  const [activeTab, setActiveTab] = useState("studio");
+  // Changed default active tab to "festival" since "studio" is removed
+  const [activeTab, setActiveTab] = useState("festival");
 
   const HUB_DATA: Record<string, any> = {
-    studio: {
-      id: "studio",
-      label: "Studio",
-      icon: "📸",
-      title: "The Studio Experience",
-      desc: "Step into our controlled environment. We craft the perfect light for portraits, bridals, and product photography using industry-leading modifiers and cinema-grade glass.",
-      image: portrait,
-      link: "#gallery",
-      btnText: "View Portfolio",
-      widgets: [
-        { title: "Lighting", value: "Profoto B10X", icon: "💡" },
-        { title: "Backdrops", value: "Seamless", icon: "🎨" },
-        { title: "Delivery", value: "48 Hours", icon: "⚡" },
-      ]
-    },
     festival: {
       id: "festival",
-      label: "Festival",
+      label: "FESTIVAL",
       icon: "🛕",
       title: "Aambal Vasantham",
       desc: "We are the official visual storytellers of the festival. From drone aerials to intimate crowd portraits, we capture the divine chaos and the quiet moments in between.",
       image: hero,
-      link: "#packages",
-      btnText: "Book Festival Slot",
+      linkProps: { to: "/packages" },
+      btnText: "VIEW PACKAGES",
+      btnColor: "bg-[#f5a623]", // Orange/Gold
       widgets: [
-        { title: "Coverage", value: "Full Day", icon: "🚁" },
-        { title: "Team", value: "4 Shooters", icon: "👥" },
-        { title: "Specialty", value: "Night Aarti", icon: "🕯️" },
+        { title: "COVERAGE", value: "Full Day", icon: "🚁" },
+        { title: "TEAM", value: "4 Shooters", icon: "👥" },
+        { title: "SPECIALTY", value: "Night Aarti", icon: "🕯️" }
       ]
     },
     homestay: {
       id: "homestay",
-      label: "Homestay",
+      label: "HOMESTAY",
       icon: "🏡",
       title: "Premium Accommodation",
       desc: "Stay right in the heart of the action. Our premium homestay offers air-conditioned comfort, traditional Kerala architecture, and immediate access to the temple grounds.",
       image: aerial,
-      link: "#homestay",
-      btnText: "Explore Rooms",
+      linkProps: { to: "/enquiry", search: { service: "custom" } },
+      btnText: "EXPLORE ROOMS",
+      btnColor: "bg-[#10b981]", // Emerald Green
       widgets: [
-        { title: "Rooms", value: "3 Suites", icon: "🛏️" },
-        { title: "Distance", value: "200m", icon: "🚶" },
-        { title: "Amenities", value: "Free Wi-Fi", icon: "📶" },
+        { title: "ROOMS", value: "3 Suites", icon: "🛏️" },
+        { title: "DISTANCE", value: "200m", icon: "🚶" },
+        { title: "AMENITIES", value: "Free Wi-Fi", icon: "📶" }
       ]
     }
   };
@@ -647,64 +367,64 @@ function HubDashboard() {
 
   return (
     <BentoWrapper id="hub" eyebrow="Explore" title={<>Discover our <span className="italic text-purple-500">spaces.</span></>}>
-      {/* Dashboard Container mimicking the screenshot */}
-      <div className="w-full bg-[#1e1e24] rounded-[32px] md:rounded-[40px] p-3 md:p-4 flex flex-col lg:flex-row gap-3 md:gap-4 shadow-2xl overflow-hidden mt-6 h-auto lg:h-[500px]">
+      
+      {/* ── Main Outer Dark Container ── */}
+      <div className="w-full bg-[#1c1c1e] rounded-[32px] md:rounded-[40px] p-3 md:p-4 flex flex-col lg:flex-row gap-3 md:gap-4 shadow-2xl overflow-hidden mt-6 h-auto lg:h-[480px]">
         
-        {/* Left Sidebar (Navigation) - Swipes horizontally on mobile */}
-        <div className="w-full lg:w-[120px] bg-[#2a2a32] rounded-[24px] md:rounded-[32px] p-2 md:p-3 flex flex-row lg:flex-col gap-2 md:gap-4 overflow-x-auto scrollbar-hide items-center justify-start lg:justify-start lg:py-6 shadow-inner shrink-0 snap-x">
-          <div className="hidden lg:flex w-12 h-12 bg-white/5 rounded-full items-center justify-center text-white mb-4 shrink-0">
-             <span className="text-xl">S</span>
+        {/* ── LEFT SIDEBAR (Tabs) ── */}
+        <div className="w-full lg:w-[110px] bg-[#141415] rounded-[24px] md:rounded-[32px] p-2 md:p-3 flex flex-row lg:flex-col gap-2 md:gap-4 overflow-x-auto scrollbar-hide items-center justify-start lg:py-6 shadow-inner shrink-0 snap-x">
+          <div className="hidden lg:flex w-12 h-12 bg-white/10 rounded-full items-center justify-center text-white mb-2 shrink-0">
+             <span className="text-lg font-bold">S</span>
           </div>
           
           {Object.values(HUB_DATA).map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`snap-center flex flex-col items-center justify-center min-w-[80px] h-[80px] lg:w-20 lg:h-20 rounded-[20px] lg:rounded-[24px] transition-all duration-300 shrink-0 ${
-                activeTab === tab.id 
-                  ? "bg-white text-gray-900 shadow-md lg:scale-105" 
+              className={`snap-center flex flex-col items-center justify-center min-w-[76px] h-[76px] lg:w-[84px] lg:h-[84px] rounded-[20px] lg:rounded-[24px] transition-all duration-300 shrink-0 ${
+                activeTab === tab.id
+                  ? "bg-white text-gray-900 shadow-md lg:scale-105"
                   : "bg-transparent text-gray-400 hover:bg-white/10"
               }`}
             >
               <span className="text-xl md:text-2xl mb-1">{tab.icon}</span>
-              <span className={`text-[8px] md:text-[9px] font-bold tracking-wider uppercase ${activeTab === tab.id ? 'text-gray-800' : 'text-gray-500'}`}>
+              <span className={`text-[8px] md:text-[9px] font-bold tracking-wider uppercase ${activeTab === tab.id ? 'text-gray-900' : 'text-gray-500'}`}>
                 {tab.label}
               </span>
             </button>
           ))}
         </div>
 
-        {/* Center Area (Details & Widgets) */}
-        <div className="flex-1 flex flex-col gap-3 md:gap-4 overflow-y-auto scrollbar-hide">
+        {/* ── CENTER AREA (Text & Widgets) ── */}
+        <div className="flex-1 flex flex-col overflow-y-auto scrollbar-hide">
           <AnimatePresence mode="wait">
             <motion.div 
-              key={active.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
-              className="flex-1 flex flex-col gap-3 md:gap-4"
+              key={active.id} 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -10 }} 
+              transition={{ duration: 0.3 }} 
+              className="flex-1 flex flex-col h-full gap-3 md:gap-4"
             >
               {/* Main Info Card */}
-              <div className="bg-[#2a2a32] rounded-[24px] md:rounded-[32px] p-6 md:p-8 flex-1 flex flex-col justify-center relative overflow-hidden border border-white/5">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] pointer-events-none"></div>
-                <span className="bg-white/10 text-white w-max px-3 py-1 md:px-4 md:py-1.5 rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-widest mb-4 md:mb-6 border border-white/10">
-                  {active.label} Section
+              <div className="bg-[#262629] rounded-[24px] md:rounded-[32px] p-6 md:p-8 lg:p-10 flex-1 flex flex-col justify-center relative overflow-hidden">
+                <span className="bg-white/10 text-white w-max px-3 py-1 md:px-4 md:py-1.5 rounded-full text-[9px] md:text-[10px] font-bold uppercase tracking-widest mb-6 border border-white/5">
+                  {active.label} SECTION
                 </span>
-                <h2 className="text-2xl md:text-4xl lg:text-5xl font-display text-white mb-3 md:mb-4 leading-tight">
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-display text-white mb-4 leading-tight font-medium">
                   {active.title}
                 </h2>
-                <p className="text-gray-400 text-xs md:text-sm leading-relaxed max-w-md font-medium">
+                <p className="text-gray-400 text-sm md:text-base leading-relaxed max-w-lg font-medium">
                   {active.desc}
                 </p>
               </div>
 
-              {/* Mini Widgets Row */}
-              <div className="grid grid-cols-3 gap-2 md:gap-4 shrink-0">
+              {/* Bottom Light-Blue Widgets */}
+              <div className="grid grid-cols-3 gap-2 md:gap-4 shrink-0 h-[100px]">
                 {active.widgets.map((widget: any, i: number) => (
-                  <div key={i} className="bg-[#b3c5d7] rounded-[20px] md:rounded-[28px] p-3 md:p-4 flex flex-col justify-center items-center text-center shadow-inner hover:scale-[1.02] transition-transform">
-                    <span className="text-xl md:text-2xl mb-1 md:mb-2">{widget.icon}</span>
-                    <p className="text-[8px] md:text-[10px] font-bold text-gray-600 uppercase tracking-wider line-clamp-1">{widget.title}</p>
+                  <div key={i} className="bg-[#d2dce3] rounded-[20px] md:rounded-[24px] p-3 md:p-4 flex flex-col justify-center items-center text-center shadow-inner hover:scale-[1.02] transition-transform">
+                    <span className="text-xl md:text-2xl mb-1">{widget.icon}</span>
+                    <p className="text-[8px] md:text-[9px] font-bold text-gray-500 uppercase tracking-widest line-clamp-1">{widget.title}</p>
                     <p className="text-xs md:text-sm font-bold text-gray-900 whitespace-nowrap">{widget.value}</p>
                   </div>
                 ))}
@@ -713,36 +433,40 @@ function HubDashboard() {
           </AnimatePresence>
         </div>
 
-        {/* Right Area (Media & Action) */}
-        <div className="w-full lg:w-[340px] flex flex-col gap-3 md:gap-4 shrink-0">
+        {/* ── RIGHT AREA (Image & Action Button) ── */}
+        <div className="w-full lg:w-[320px] flex flex-col gap-3 md:gap-4 shrink-0 h-full">
           <AnimatePresence mode="wait">
             <motion.div 
-              key={active.id + '-img'}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.4 }}
-              className="h-[250px] lg:flex-1 bg-[#2a2a32] rounded-[24px] md:rounded-[32px] relative overflow-hidden border border-white/5 group"
+              key={active.id + '-img'} 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }} 
+              transition={{ duration: 0.4 }} 
+              className="h-[250px] lg:flex-1 bg-[#262629] rounded-[24px] md:rounded-[32px] relative overflow-hidden group"
             >
-              <img src={active.image} alt={active.title} className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-700" />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1e1e24] via-transparent to-transparent"></div>
-              
-              {/* Media Player styled overlay */}
-              <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-6 md:right-6 bg-[#2a2a32]/90 backdrop-blur-md rounded-2xl p-3 md:p-4 border border-white/10 flex items-center justify-between shadow-lg">
+              <img src={active.image} alt={active.title} className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-700" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#1c1c1e] via-transparent to-transparent"></div>
+
+              {/* Inner Image Label Overlay */}
+              <div className="absolute bottom-4 left-4 right-4 bg-[#1c1c1e]/90 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center justify-between shadow-lg">
                 <div>
-                  <p className="text-white text-[10px] md:text-xs font-bold">{active.title}</p>
-                  <p className="text-gray-400 text-[8px] md:text-[10px] uppercase tracking-wider mt-0.5">Explore Gallery</p>
+                  <p className="text-white text-[11px] font-bold">{active.title}</p>
+                  <p className="text-gray-400 text-[8px] uppercase tracking-widest mt-0.5">Explore {active.label}</p>
                 </div>
-                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-purple-500 flex items-center justify-center text-white cursor-pointer hover:bg-purple-400 transition-colors">
-                  <span className="text-[10px] md:text-xs ml-0.5">▶</span>
+                <div className={`w-8 h-8 rounded-full ${active.btnColor} flex items-center justify-center text-white shadow-md`}>
+                  <span className="text-[10px] ml-0.5">▶</span>
                 </div>
               </div>
             </motion.div>
           </AnimatePresence>
 
-          <a href={active.link} className="h-[60px] md:h-[70px] bg-purple-500 rounded-[20px] md:rounded-[28px] flex items-center justify-center text-white font-bold text-xs md:text-sm uppercase tracking-widest hover:bg-purple-400 transition-colors shadow-[0_8px_20px_rgba(168,85,247,0.3)] border border-purple-400">
+          {/* Dynamic Link Button */}
+          <Link 
+            {...active.linkProps} 
+            className={`h-[60px] md:h-[70px] ${active.btnColor} rounded-[20px] md:rounded-[28px] flex items-center justify-center text-white font-bold text-xs md:text-sm uppercase tracking-widest hover:brightness-110 transition-all shadow-lg`}
+          >
             {active.btnText}
-          </a>
+          </Link>
         </div>
 
       </div>
@@ -750,107 +474,17 @@ function HubDashboard() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BENTO GALLERY & BANNER SECTION
-// ─────────────────────────────────────────────────────────────────────────────
 function BentoGalleryBanner() {
-  const galleryImages = [
-    portrait, hero, aerial, portrait,
-    hero, aerial, portrait, hero,
-    aerial, portrait, hero, aerial
-  ];
-
+  const galleryImages = [ portrait, hero, aerial, portrait, hero, aerial, portrait, hero, aerial, portrait, hero, aerial ];
   return (
     <BentoWrapper id="gallery-banner" noPadding>
       <div className="p-4 md:p-6 lg:p-8 flex flex-col gap-4 md:gap-6 w-full">
-        {/* Photo Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           {galleryImages.map((img: string, i: number) => (
             <div key={i} className="relative aspect-[4/3] rounded-[20px] md:rounded-[24px] overflow-hidden group bg-gray-200 shadow-inner">
-              <img 
-                src={img} 
-                alt="Gallery Portfolio Item" 
-                className="w-full h-full object-cover grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" 
-              />
+              <img src={img} alt="Gallery Portfolio Item" className="w-full h-full object-cover grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" />
             </div>
           ))}
-        </div>
-      </div>
-    </BentoWrapper>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RE-STYLED BENTO SECTIONS
-// ─────────────────────────────────────────────────────────────────────────────
-function InteractivePhotoFrame() {
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [filter, setFilter] = useState("none");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const filters = [
-    { id: "none", name: "Original", css: "none" },
-    { id: "warm", name: "Festival Warm", css: "sepia(0.4) saturate(1.3) brightness(1.05)" },
-    { id: "bw", name: "Black & White", css: "grayscale(1) contrast(1.1)" },
-  ];
-
-  const handleFileChange = (e: any) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => setUploadedImage(e.target?.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  return (
-    <BentoWrapper id="try-on" eyebrow="Interactive" title={<>Your photo in a <span className="italic text-purple-500">festival frame.</span></>}>
-      <div className="grid lg:grid-cols-2 gap-8 md:gap-12 items-start mt-4 md:mt-0">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative w-full max-w-full md:max-w-[400px] aspect-square rounded-[24px] md:rounded-[32px] overflow-hidden bg-purple-50 border-2 border-purple-200 flex flex-col items-center justify-center shadow-sm cursor-pointer hover:bg-purple-100/50 transition-colors" onClick={() => fileInputRef.current?.click()}>
-            {uploadedImage ? (
-              <img src={uploadedImage} alt="Preview" className="absolute inset-0 w-full h-full object-cover" style={{ filter: filters.find(f => f.id === filter)?.css }} />
-            ) : (
-              <div className="flex flex-col items-center gap-4">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-2xl md:text-3xl bg-purple-100 text-purple-500 border-2 border-dashed border-purple-300">📷</div>
-                <div className="text-center px-8">
-                  <p className="text-gray-900 text-xs md:text-sm font-bold">Click to upload photo</p>
-                </div>
-              </div>
-            )}
-            <div className="absolute inset-0 pointer-events-none">
-              {FESTIVAL_FRAMES[0].svgFrame}
-            </div>
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-        </div>
-        
-        <div className="flex flex-col gap-6 md:gap-8">
-          <div>
-            <p className="text-[10px] md:text-xs uppercase tracking-[0.28em] text-gray-500 mb-3 md:mb-4 font-bold">Photo filter</p>
-            <div className="flex flex-wrap gap-2">
-              {filters.map((f) => (
-                <button key={f.id} onClick={() => setFilter(f.id)} className={`px-4 py-2 rounded-full text-[10px] md:text-xs font-bold transition-all ${filter === f.id ? 'border border-purple-400 bg-purple-100 text-purple-700 shadow-sm' : 'border border-purple-200 bg-white/60 text-slate-500 hover:bg-white'}`}>
-                  {f.name}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="rounded-[20px] md:rounded-[24px] border border-white/80 bg-white/50 p-5 md:p-6 shadow-sm">
-            <p className="text-[10px] md:text-xs uppercase tracking-widest text-gray-500 mb-3 md:mb-4 font-bold">How it works</p>
-            <div className="space-y-3 md:space-y-4">
-              <div className="flex items-center gap-3 md:gap-4">
-                <span className="text-[9px] md:text-[10px] font-mono text-purple-400 font-bold">01</span>
-                <div className="h-px flex-1 bg-black/5" />
-                <span className="text-[11px] md:text-xs text-gray-600 font-medium">Upload photo</span>
-              </div>
-              <div className="flex items-center gap-3 md:gap-4">
-                <span className="text-[9px] md:text-[10px] font-mono text-purple-400 font-bold">02</span>
-                <div className="h-px flex-1 bg-black/5" />
-                <span className="text-[11px] md:text-xs text-gray-600 font-medium">Apply filter</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </BentoWrapper>
@@ -876,34 +510,52 @@ function StudioServicesBento() {
   );
 }
 
-function PackagesBento() {
+// Notice we pass in the packages prop here 👇
+function PackagesBento({ packages }: { packages: any[] }) {
+  const isEditor = window.self !== window.top;
+
+  // Don't render if there are no packages yet
+  if (!packages || packages.length === 0) return null;
+
   return (
-    <BentoWrapper id="packages" eyebrow="Services & Pricing" title={<>Four packages. <span className="italic text-purple-500">One festival.</span></>}>
+    <BentoWrapper id="packages" eyebrow="Services & Pricing" title={<>Festival <span className="italic text-purple-500">Packages.</span></>}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 md:mt-8">
-        {packageTeasers.map((p) => (
-          <div key={p.id} className="bg-white/50 rounded-[24px] md:rounded-[32px] border border-white/80 p-5 md:p-6 flex flex-col gap-4 md:gap-5 hover:-translate-y-1 transition-transform shadow-sm relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 md:w-32 h-24 md:h-32 opacity-10" style={{ background: `radial-gradient(circle at top right, ${p.color}, transparent)`}}></div>
-            <div className="flex h-12 md:h-14 w-12 md:w-14 items-center justify-center rounded-[16px] md:rounded-[20px] text-xl md:text-2xl bg-white border border-white/80 relative z-10 shadow-sm">{p.icon}</div>
-            <div className="flex-1 relative z-10">
+        
+        {/* 👇 FIX: map over 'packages' and explicitly type 'p' as 'any' */}
+        {packages.map((p: any) => (
+          
+          <div 
+            key={p.id} 
+            onClick={() => isEditor && window.parent.postMessage({ type: "EDIT_PACKAGE", id: p.id }, "*")}
+            className={`bg-white/50 rounded-[24px] md:rounded-[32px] border border-white/80 p-5 md:p-6 flex flex-col gap-4 md:gap-5 hover:-translate-y-1 transition-transform shadow-sm relative overflow-hidden h-full ${isEditor ? 'cursor-pointer hover:outline outline-4 outline-emerald-500' : ''}`}
+          >
+            <div className="absolute top-0 right-0 w-32 h-32 opacity-10 bg-purple-200 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div className="flex-1 relative z-10 flex flex-col">
               <h3 className="font-display text-lg md:text-xl text-gray-900 mb-1 font-bold">{p.name}</h3>
-              <p className="text-[9px] md:text-[10px] text-gray-500 tracking-widest uppercase mb-2 md:mb-3 font-bold">{p.duration}</p>
-              <p className="text-xs md:text-sm text-gray-600 font-medium">{p.desc}</p>
+              <p className="text-[9px] md:text-[10px] text-gray-500 tracking-widest uppercase mb-3 font-bold">{p.duration}</p>
+              
+              {p.image && (
+                <div className="w-full h-32 md:h-40 rounded-[20px] overflow-hidden mb-4 shadow-inner">
+                  <img src={p.image} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                </div>
+              )}
+              
+              <p className="text-xs md:text-sm text-gray-600 font-medium line-clamp-2">{p.description}</p>
             </div>
-            <div className="flex items-center justify-between pt-4 md:pt-5 border-t border-black/5 relative z-10">
-              <span className="font-display text-lg md:text-xl font-bold" style={{ color:p.color }}>{p.price}</span>
-              <Link to="/booking-confirmed" search={{ plan: p.id }} className="text-[9px] md:text-[10px] font-bold px-3 md:px-4 py-1.5 md:py-2 rounded-full bg-gray-900 text-white hover:bg-black transition-colors z-20 shadow-md">
-                BOOK
+            
+            <div className="flex items-center justify-between pt-4 md:pt-5 border-t border-black/5 relative z-10 mt-auto">
+              <span className="font-display text-lg md:text-xl font-bold text-purple-600">{p.price}</span>
+              <Link to="/booking-confirmed" search={{ plan: p.id }} className="text-[10px] font-bold px-4 md:px-5 py-2 md:py-2.5 rounded-full bg-gray-900 text-white hover:bg-purple-600 transition-colors z-20 shadow-md uppercase tracking-wider">
+                Book Now
               </Link>
             </div>
           </div>
         ))}
-      </div>
 
+      </div>
       <div className="mt-8 md:mt-10 flex justify-center relative z-20">
-        <Link 
-          to="/packages"
-          className="rounded-full border border-purple-200 bg-white/60 backdrop-blur-md px-5 md:px-6 py-2 md:py-2.5 text-xs md:text-sm font-semibold text-purple-600 hover:bg-purple-500 hover:text-white hover:border-purple-500 shadow-sm transition-all duration-200"
-        >
+        <Link to="/packages" className="rounded-full border border-purple-200 bg-white/60 backdrop-blur-md px-5 md:px-6 py-2 md:py-2.5 text-xs md:text-sm font-semibold text-purple-600 hover:bg-purple-500 hover:text-white hover:border-purple-500 shadow-sm transition-all duration-200">
           Compare all packages →
         </Link>
       </div>
@@ -956,6 +608,120 @@ function ProcessBento() {
         ))}
       </div>
     </BentoWrapper>
+  );
+}
+
+// ── NEW: PREMIUM ENQUIRY CTA SECTION ──
+function PremiumEnquiryCTA() {
+  return (
+    <div className="relative w-full max-w-[1400px] mx-auto mb-6 rounded-[32px] md:rounded-[40px] overflow-hidden group p-1 z-20">
+      {/* Animated gradient border effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-fuchsia-500 to-orange-500 opacity-50 group-hover:opacity-100 transition-opacity duration-700 blur-xl"></div>
+      
+      <div className="relative bg-[#0a0a0c] rounded-[30px] md:rounded-[38px] p-8 md:p-16 lg:p-20 overflow-hidden flex flex-col md:flex-row items-center justify-between gap-10">
+        {/* Background noise/texture */}
+        <div className="absolute inset-0 opacity-[0.15] mix-blend-overlay pointer-events-none" style={{backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")'}}></div>
+        
+        {/* Lighting accents */}
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-purple-600/30 rounded-full blur-[80px]"></div>
+        <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-orange-500/20 rounded-full blur-[80px]"></div>
+
+        <div className="relative z-10 flex-1 text-center md:text-left">
+          <span className="inline-block py-1.5 px-4 rounded-full bg-white/10 border border-white/20 text-white/80 text-[10px] uppercase tracking-widest font-bold mb-6">
+            Exclusive Commissions
+          </span>
+          <h2 className="font-display text-4xl md:text-5xl lg:text-7xl text-white leading-tight mb-4">
+            Have a unique <br className="hidden md:block" />
+            <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-orange-400">vision?</span>
+          </h2>
+          <p className="text-gray-400 text-sm md:text-base max-w-md mx-auto md:mx-0 font-medium">
+            Beyond festivals and standard packages, we take on select private commissions, commercial shoots, and destination weddings. Let's discuss your masterpiece.
+          </p>
+        </div>
+
+        <div className="relative z-10 shrink-0 mt-4 md:mt-0">
+          <Link to="/enquiry" search={{ service: "" }} className="relative inline-flex h-16 md:h-20 items-center justify-center rounded-full bg-white px-8 md:px-12 font-bold text-gray-900 transition-transform hover:scale-105 shadow-[0_0_40px_rgba(255,255,255,0.3)] group-hover:shadow-[0_0_60px_rgba(255,255,255,0.4)]">
+            <span className="text-sm md:text-base uppercase tracking-widest">Start a Conversation</span>
+            <svg className="ml-3 w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── NEW: PREMIUM HOMESTAY SECTION ──
+// ── PREMIUM HOMESTAY SECTION (WHITE THEME) ──
+function PremiumHomestaySection() {
+  return (
+    <div id="homestay" className="relative w-full max-w-[1400px] mx-auto mb-6 rounded-[32px] md:rounded-[40px] overflow-hidden group z-20 bg-white border border-gray-200 shadow-[0_20px_60px_rgba(0,0,0,0.06)]">
+      
+      {/* Background Image with Light Overlay */}
+      <div className="absolute inset-0">
+         <img src={aerial} alt="Homestay View" className="w-full h-full object-cover opacity-[0.12] mix-blend-multiply group-hover:scale-105 transition-transform duration-1000" />
+         {/* White gradients to blend the image smoothly */}
+         <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-transparent"></div>
+         <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-white/40"></div>
+      </div>
+
+      <div className="relative z-10 p-8 md:p-12 lg:p-16 flex flex-col md:flex-row items-center gap-12">
+         {/* Text Content */}
+         <div className="flex-1 text-center md:text-left">
+            <span className="inline-block py-1.5 px-4 rounded-full bg-orange-50 border border-orange-200 text-orange-600 text-[10px] uppercase tracking-widest font-bold mb-6 shadow-sm">
+              VIP Accommodation
+            </span>
+            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl text-gray-900 leading-tight mb-4">
+              Stay at the <br className="hidden md:block"/>
+              <span className="italic text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-yellow-500 drop-shadow-sm">Heart of the Festival.</span>
+            </h2>
+            <p className="text-gray-600 text-sm md:text-base leading-relaxed mb-8 max-w-lg mx-auto md:mx-0 font-medium">
+              Immerse yourself completely. Our premium homestay offers air-conditioned comfort, traditional Kerala architecture, and immediate access to the Aambal Vasantham temple grounds—just 200 meters away.
+            </p>
+
+            {/* Feature Pills */}
+            <div className="grid grid-cols-2 gap-4 mb-8 max-w-lg mx-auto md:mx-0">
+               {[
+                 { icon: "❄️", text: "Air Conditioned" },
+                 { icon: "🚶", text: "200m to Temple" },
+                 { icon: "📶", text: "High-Speed Wi-Fi" },
+                 { icon: "☕", text: "Morning Breakfast" }
+               ].map((f, i) => (
+                 <div key={i} className="flex items-center gap-3 bg-white/60 border border-gray-200 rounded-2xl p-3 backdrop-blur-md shadow-sm hover:-translate-y-0.5 transition-transform cursor-default">
+                   <span className="text-lg bg-gray-50 rounded-full w-8 h-8 flex items-center justify-center border border-gray-100">{f.icon}</span>
+                   <span className="text-xs font-bold text-gray-800">{f.text}</span>
+                 </div>
+               ))}
+            </div>
+
+            <a href="#enquiry" className="inline-flex h-14 items-center justify-center rounded-full bg-gradient-to-r from-orange-500 to-yellow-500 px-8 font-bold text-white transition-transform hover:scale-105 shadow-[0_10px_30px_rgba(249,115,22,0.25)]">
+              Reserve a Suite
+            </a>
+         </div>
+
+         {/* Right Image/Cards */}
+         <div className="w-full md:w-[400px] lg:w-[450px] shrink-0 relative">
+            <div className="aspect-[4/5] rounded-[32px] overflow-hidden border-4 border-white shadow-2xl relative z-10 group/img">
+               <img src={hero} className="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-105" />
+               
+               {/* Note: The bottom gradient stays dark here so the white price text is readable over the photo */}
+               <div className="absolute inset-0 bg-gradient-to-t from-gray-900/90 via-gray-900/20 to-transparent flex items-end p-6 md:p-8">
+                  <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 w-full flex justify-between items-center">
+                     <div>
+                       <div className="text-white text-xs font-bold uppercase tracking-widest mb-1 opacity-80">Per night / Suite</div>
+                       <div className="text-orange-400 font-bold text-2xl drop-shadow-md">₹3,499</div>
+                     </div>
+                     <div className="text-gray-300 text-sm font-bold line-through opacity-60">
+                       ₹5,000
+                     </div>
+                  </div>
+               </div>
+            </div>
+            
+            {/* Soft decorative background glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-orange-400/15 rounded-full blur-[80px] -z-10"></div>
+         </div>
+      </div>
+    </div>
   );
 }
 
@@ -1090,24 +856,23 @@ function Home() {
         
         <div className="px-4 md:px-8 space-y-4 md:space-y-6 mt-4 md:mt-6 hidden md:block">
           <BentoGalleryBanner />
-       
         </div>
         
         {/* ── RESUME LIGHT BENTO LAYOUT ── */}
         <div className="px-4 md:px-8 space-y-4 md:space-y-6 mt-4 md:mt-6">
           <HubDashboard />
-          <StudioServicesBento />
-          <PackagesBento /> 
-          <DroneBento />
+        
+          
           <ProcessBento />
+
+          {/* NEW PREMIUM CTA SECTION */}
+          <PremiumEnquiryCTA />
 
           <BentoWrapper id="shutter-reel" noPadding>
              <ShutterReel />
           </BentoWrapper>
           
-          <BentoWrapper id="festival-bridge" noPadding>
-             <StudioToFestivalBridge />
-          </BentoWrapper>
+       
           
           <TestimonialsBento />
 
@@ -1128,15 +893,11 @@ function Home() {
             </BentoWrapper>
           )}
 
-          {/* HOMESTAY TARGET SECTION */}
-          <BentoWrapper id="homestay" title={<>Premium <span className="italic text-purple-500">Homestay.</span></>} eyebrow="Accommodation" noPadding className="pt-8 md:pt-12">
-             <HomestaySection />
-          </BentoWrapper>
+          {/* NEW PREMIUM HOMESTAY SECTION */}
+          <PremiumHomestaySection />
 
           {/* GALLERY / PHOTOGRAPHY TARGET SECTION */}
-          <BentoWrapper id="gallery" title={<>Moments <span className="italic text-purple-500">Captured.</span></>} eyebrow="Portfolio" noPadding className="py-8 md:py-12">
-             <GallerySection />
-          </BentoWrapper>
+       
 
           <BentoWrapper id="instagram" noPadding className="py-8 md:py-12">
              <InstagramFeed />

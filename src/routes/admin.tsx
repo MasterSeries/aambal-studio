@@ -379,6 +379,7 @@ function AdminPage() {
           <Link to="/admin-enquiries"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>📩 Enquiries</button></Link>
           <Link to="/hero-editor"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>✨ Hero Editor</button></Link>
           <Link to="/enquiry-editor"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>✏️ Page Editor</button></Link>
+          <Link to="/gallery-editor"><button style={{ background: "transparent", color: "white", padding: "10px 20px", fontSize: 13, borderRadius: 100, fontWeight: 500 }}>🖼️ Edit Gallery</button></Link>
         </div>
       </div>
 

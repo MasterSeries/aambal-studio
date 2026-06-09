@@ -23,6 +23,7 @@ import { Route as HomestayEditorRouteImport } from './routes/homestay-editor'
 import { Route as HomestayRouteImport } from './routes/homestay'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HeroEditorRouteImport } from './routes/hero-editor'
+import { Route as GalleryEditorRouteImport } from './routes/gallery-editor'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as EnquiryEditorRouteImport } from './routes/enquiry-editor'
 import { Route as EnquiryRouteImport } from './routes/enquiry'
@@ -107,6 +108,11 @@ const HistoryRoute = HistoryRouteImport.update({
 const HeroEditorRoute = HeroEditorRouteImport.update({
   id: '/hero-editor',
   path: '/hero-editor',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GalleryEditorRoute = GalleryEditorRouteImport.update({
+  id: '/gallery-editor',
+  path: '/gallery-editor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GalleryRoute = GalleryRouteImport.update({
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/enquiry': typeof EnquiryRoute
   '/enquiry-editor': typeof EnquiryEditorRoute
   '/gallery': typeof GalleryRoute
+  '/gallery-editor': typeof GalleryEditorRoute
   '/hero-editor': typeof HeroEditorRoute
   '/history': typeof HistoryRoute
   '/homestay': typeof HomestayRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/enquiry': typeof EnquiryRoute
   '/enquiry-editor': typeof EnquiryEditorRoute
   '/gallery': typeof GalleryRoute
+  '/gallery-editor': typeof GalleryEditorRoute
   '/hero-editor': typeof HeroEditorRoute
   '/history': typeof HistoryRoute
   '/homestay': typeof HomestayRoute
@@ -261,6 +269,7 @@ export interface FileRoutesById {
   '/enquiry': typeof EnquiryRoute
   '/enquiry-editor': typeof EnquiryEditorRoute
   '/gallery': typeof GalleryRoute
+  '/gallery-editor': typeof GalleryEditorRoute
   '/hero-editor': typeof HeroEditorRoute
   '/history': typeof HistoryRoute
   '/homestay': typeof HomestayRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/enquiry'
     | '/enquiry-editor'
     | '/gallery'
+    | '/gallery-editor'
     | '/hero-editor'
     | '/history'
     | '/homestay'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/enquiry'
     | '/enquiry-editor'
     | '/gallery'
+    | '/gallery-editor'
     | '/hero-editor'
     | '/history'
     | '/homestay'
@@ -355,6 +366,7 @@ export interface FileRouteTypes {
     | '/enquiry'
     | '/enquiry-editor'
     | '/gallery'
+    | '/gallery-editor'
     | '/hero-editor'
     | '/history'
     | '/homestay'
@@ -387,6 +399,7 @@ export interface RootRouteChildren {
   EnquiryRoute: typeof EnquiryRoute
   EnquiryEditorRoute: typeof EnquiryEditorRoute
   GalleryRoute: typeof GalleryRoute
+  GalleryEditorRoute: typeof GalleryEditorRoute
   HeroEditorRoute: typeof HeroEditorRoute
   HistoryRoute: typeof HistoryRoute
   HomestayRoute: typeof HomestayRoute
@@ -501,6 +514,13 @@ declare module '@tanstack/react-router' {
       path: '/hero-editor'
       fullPath: '/hero-editor'
       preLoaderRoute: typeof HeroEditorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gallery-editor': {
+      id: '/gallery-editor'
+      path: '/gallery-editor'
+      fullPath: '/gallery-editor'
+      preLoaderRoute: typeof GalleryEditorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gallery': {
@@ -637,6 +657,7 @@ const rootRouteChildren: RootRouteChildren = {
   EnquiryRoute: EnquiryRoute,
   EnquiryEditorRoute: EnquiryEditorRoute,
   GalleryRoute: GalleryRoute,
+  GalleryEditorRoute: GalleryEditorRoute,
   HeroEditorRoute: HeroEditorRoute,
   HistoryRoute: HistoryRoute,
   HomestayRoute: HomestayRoute,
