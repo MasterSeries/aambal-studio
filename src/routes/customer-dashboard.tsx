@@ -85,10 +85,24 @@ export default function CustomerDashboard() {
   const [viewQrBooking, setViewQrBooking] = useState<any>(null);
   const [newDate, setNewDate] = useState("");
   const [newSlots, setNewSlots] = useState("");
-
+const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+const [daySchedules, setDaySchedules] = useState<any[]>([]);
   // Calendar State
   const [calendarDate, setCalendarDate] = useState(new Date());
+const openDaySchedule = (date: Date) => {
+  const schedules = timelineItems.filter((item) => {
+    const itemDate = new Date(item.date || item.checkIn);
 
+    return (
+      itemDate.getFullYear() === date.getFullYear() &&
+      itemDate.getMonth() === date.getMonth() &&
+      itemDate.getDate() === date.getDate()
+    );
+  });
+
+  setSelectedDate(date);
+  setDaySchedules(schedules);
+};
   // ── FIREBASE FETCH LOGIC ──
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, async (user) => {
@@ -484,15 +498,57 @@ export default function CustomerDashboard() {
                     });
 
                     return (
-                      <div key={day} className={`h-[80px] sm:h-[100px] bg-white/40 border ${isToday ? 'border-gray-400' : 'border-white/50'} rounded-xl sm:rounded-2xl p-1.5 sm:p-2 flex flex-col shadow-sm hover:shadow-md transition-shadow overflow-hidden`}>
+                      <div
+ key={day}
+ onClick={() => openDaySchedule(cellDate)}
+ className="
+ h-[80px]
+ sm:h-[100px]
+ bg-white/40
+ border
+ rounded-xl
+ sm:rounded-2xl
+ p-2
+ cursor-pointer
+ hover:scale-[1.03]
+ hover:shadow-lg
+ transition-all
+ duration-300
+ "
+>
                         
                         <span className={`text-[10px] sm:text-xs font-bold mb-1 w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center rounded-full shrink-0 ${isToday ? 'bg-black text-white shadow-md' : 'text-gray-500'}`}>
                           {day}
                         </span>
                         
                         {/* Events inside the day */}
-                        <div className="flex flex-col gap-1 overflow-y-auto scrollbar-hide pr-1 mt-1">
-                          {dayEvents.map((ev, i) => {
+                        <div
+  className="
+  flex
+  flex-col
+  gap-1
+  mt-1
+  h-[48px]
+  overflow-hidden
+  "
+>
+                          {dayEvents.slice(0, 2).map((ev, i) => {
+                            {dayEvents.length > 2 && (
+  <div
+    className="
+      text-[8px]
+      font-bold
+      text-gray-500
+      bg-gray-100
+      rounded-md
+      px-2
+      py-1
+      text-center
+    "
+  >
+    +{dayEvents.length - 2} more
+  </div>
+)}
                             const isHome = ev.type === 'homestay';
                             return (
                               <div key={i} className={`text-[8px] sm:text-[9px] font-bold px-1.5 py-1 rounded-md truncate shadow-sm ${isHome ? 'bg-[#ffb38a]/20 text-orange-700 border border-orange-200/50' : 'bg-black text-white'}`} title={ev.packageName || ev.package || "Booking"}>
@@ -660,7 +716,111 @@ export default function CustomerDashboard() {
         )}
       </AnimatePresence>
 
+<AnimatePresence>
+  {selectedDate && (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="
+      fixed inset-0
+      z-[100]
+      bg-black/40
+      backdrop-blur-md
+      flex items-center justify-center
+      p-6
+      "
+    >
+      <motion.div
+        initial={{ scale: .9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: .9, y: 20 }}
+        className="
+        w-full
+        max-w-xl
+        bg-white
+        rounded-[32px]
+        p-8
+        shadow-2xl
+        "
+      >
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-2xl font-bold">
+              {selectedDate.toLocaleDateString()}
+            </h2>
 
+            <p className="text-gray-500 text-sm">
+              Schedule for selected day
+            </p>
+          </div>
+
+          <button
+            onClick={() => setSelectedDate(null)}
+            className="w-10 h-10 rounded-full bg-gray-100"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Content */}
+
+        {daySchedules.length === 0 ? (
+          <div className="py-20 text-center">
+            <div className="text-5xl mb-4">📅</div>
+
+            <h3 className="text-xl font-bold">
+              No Schedule Found
+            </h3>
+
+            <p className="text-gray-500 mt-2">
+              There are no bookings on this date.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4 max-h-[450px] overflow-y-auto">
+            {daySchedules.map((schedule, index) => (
+              <div
+                key={index}
+                className="
+                bg-gray-50
+                border
+                rounded-2xl
+                p-5
+                "
+              >
+                <div className="flex justify-between">
+                  <h3 className="font-bold">
+                    {schedule.packageName ||
+                      schedule.package ||
+                      "Booking"}
+                  </h3>
+
+                  <span className="text-green-600 text-sm font-semibold">
+                    {schedule.status || "Pending"}
+                  </span>
+                </div>
+
+                <p className="text-gray-500 mt-2">
+                  {schedule.timeSlots?.join(", ") ||
+                    schedule.time ||
+                    "Time TBD"}
+                </p>
+
+                <p className="text-sm mt-2">
+                  {schedule.clientName ||
+                    schedule.name ||
+                    "Guest"}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
   </>
   );
 }
